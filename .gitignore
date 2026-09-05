@@ -1,0 +1,87 @@
+# ==============================
+# Gradle & Build Artifacts
+# ==============================
+.gradle/
+build/
+out/
+bin/
+
+# Compiled Java Classes
+*.class
+
+# Log files
+*.log
+logs/
+
+# Package files (ignora JARs gerados, preservando o Gradle Wrapper)
+*.jar
+*.war
+*.ear
+!gradle/wrapper/gradle-wrapper.jar
+
+# Quarkus (pasta de desenvolvimento, cache e executáveis nativos)
+.quarkus/
+*-runner
+*-runner.jar
+*-runner.exe
+
+# JVM crash dumps
+hs_err_pid*
+replay_pid*
+
+# ==============================
+# IDEs & Editores
+# ==============================
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Eclipse
+.project
+.classpath
+.settings/
+.factorypath
+
+# Visual Studio Code
+.vscode/
+
+# NetBeans
+nb-configuration.xml
+nbproject/private/
+
+# Vim & Temporários
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+*.rej
+
+# ==============================
+# Sistema Operacional
+# ==============================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ==============================
+# Segredos, Ambiente e Certificados
+# ==============================
+.env
+.env.*
+!.env.example
+*.local
+.certs/
+application-local.properties
+application-secret.properties
+http-client.private.env.json
