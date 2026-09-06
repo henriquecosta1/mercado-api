@@ -1,6 +1,8 @@
 package com.mercado.infrastructure.persistence.entity;
 
 import com.mercado.domain.entity.FormaPagamento;
+import com.mercado.domain.entity.ItemVenda;
+import com.mercado.domain.entity.StatusVenda;
 import com.mercado.domain.entity.Venda;
 import com.mercado.domain.valueobject.Dinheiro;
 import com.mercado.domain.valueobject.TenantId;
@@ -11,7 +13,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -40,8 +44,23 @@ public class VendaJpaEntity extends PanacheEntityBase {
     @Column(name = "descricao", length = 255)
     public String descricao;
 
+    @Column(name = "status", nullable = false, length = 20)
+    public String status;
+
+    @Column(name = "cliente_id")
+    public UUID clienteId;
+
+    @Column(name = "nome_cliente", length = 120)
+    public String nomeCliente;
+
+    @Column(name = "motivo_cancelamento", length = 255)
+    public String motivoCancelamento;
+
+    @Column(name = "cancelada_em")
+    public Instant canceladaEm;
+
     @Column(name = "criado_em", nullable = false)
-    public LocalDateTime criadoEm;
+    public Instant criadoEm;
 
     public VendaJpaEntity() {
     }
@@ -55,11 +74,26 @@ public class VendaJpaEntity extends PanacheEntityBase {
         entity.formaPagamento = domain.getFormaPagamento().name();
         entity.troco = domain.getTroco().valor();
         entity.descricao = domain.getDescricao();
+        entity.status = domain.getStatus() != null ? domain.getStatus().name() : StatusVenda.CONCLUIDA.name();
+        entity.clienteId = domain.getClienteId();
+        entity.nomeCliente = domain.getNomeCliente();
+        entity.motivoCancelamento = domain.getMotivoCancelamento();
+        entity.canceladaEm = domain.getCanceladaEm();
         entity.criadoEm = domain.getCriadoEm();
         return entity;
     }
 
+    public void updateFromDomain(Venda domain) {
+        this.status = domain.getStatus().name();
+        this.motivoCancelamento = domain.getMotivoCancelamento();
+        this.canceladaEm = domain.getCanceladaEm();
+    }
+
     public Venda toDomain() {
+        return toDomain(Collections.emptyList());
+    }
+
+    public Venda toDomain(List<ItemVenda> itens) {
         return new Venda(
             this.id,
             TenantId.de(this.tenantId),
@@ -68,6 +102,12 @@ public class VendaJpaEntity extends PanacheEntityBase {
             FormaPagamento.valueOf(this.formaPagamento),
             Dinheiro.de(this.troco),
             this.descricao,
+            itens != null ? itens : Collections.emptyList(),
+            StatusVenda.valueOf(this.status != null ? this.status : StatusVenda.CONCLUIDA.name()),
+            this.clienteId,
+            this.nomeCliente,
+            this.motivoCancelamento,
+            this.canceladaEm,
             this.criadoEm
         );
     }

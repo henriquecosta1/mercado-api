@@ -4,7 +4,7 @@ import com.mercado.domain.exception.RegraDeNegocioException;
 import com.mercado.domain.valueobject.Dinheiro;
 import com.mercado.domain.valueobject.TenantId;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -19,16 +19,16 @@ public class Caixa {
     private final Dinheiro saldoInicial;
     private Dinheiro saldoDinheiro;
     private StatusCaixa status;
-    private final LocalDateTime abertoEm;
-    private LocalDateTime fechadoEm;
+    private final Instant abertoEm;
+    private Instant fechadoEm;
 
     public Caixa(UUID id,
                  TenantId tenantId,
                  Dinheiro saldoInicial,
                  Dinheiro saldoDinheiro,
                  StatusCaixa status,
-                 LocalDateTime abertoEm,
-                 LocalDateTime fechadoEm) {
+                 Instant abertoEm,
+                 Instant fechadoEm) {
         this.id = Objects.requireNonNull(id, "Id do caixa não pode ser nulo.");
         this.tenantId = Objects.requireNonNull(tenantId, "TenantId não pode ser nulo.");
         this.saldoInicial = Objects.requireNonNull(saldoInicial, "Saldo inicial não pode ser nulo.");
@@ -44,7 +44,7 @@ public class Caixa {
             throw new RegraDeNegocioException("Saldo inicial do caixa não pode ser negativo.");
         }
         UUID id = UUID.randomUUID();
-        LocalDateTime agora = LocalDateTime.now();
+        Instant agora = Instant.now();
         return new Caixa(id, tenantId, saldoInicial, saldoInicial, StatusCaixa.ABERTO, agora, null);
     }
 
@@ -57,9 +57,27 @@ public class Caixa {
         this.saldoDinheiro = this.saldoDinheiro.somar(valor);
     }
 
-    public void sangria(Dinheiro valor) {
+    public void estornarVendaDinheiro(Dinheiro valor) {
+        validarCaixaAberto();
+        Objects.requireNonNull(valor, "Valor para estorno não pode ser nulo.");
+        if (valor.isNegativo() || valor.isZero()) {
+            throw new RegraDeNegocioException("Valor para estorno deve ser estritamente positivo.");
+        }
+        if (this.saldoDinheiro.isMenorQue(valor)) {
+            throw new RegraDeNegocioException(
+                "Saldo em dinheiro insuficiente no caixa para realizar o estorno. Saldo disponível: " +
+                this.saldoDinheiro + ", valor solicitado: " + valor
+            );
+        }
+        this.saldoDinheiro = this.saldoDinheiro.subtrair(valor);
+    }
+
+    public void realizarSangria(Dinheiro valor, String motivo) {
         validarCaixaAberto();
         Objects.requireNonNull(valor, "Valor para sangria não pode ser nulo.");
+        if (motivo == null || motivo.isBlank()) {
+            throw new RegraDeNegocioException("Motivo da sangria é obrigatório.");
+        }
         if (valor.isNegativo() || valor.isZero()) {
             throw new RegraDeNegocioException("Valor para sangria deve ser estritamente positivo.");
         }
@@ -72,10 +90,30 @@ public class Caixa {
         this.saldoDinheiro = this.saldoDinheiro.subtrair(valor);
     }
 
-    public void fechar() {
+    public void realizarSuprimento(Dinheiro valor, String motivo) {
+        validarCaixaAberto();
+        Objects.requireNonNull(valor, "Valor para suprimento não pode ser nulo.");
+        if (motivo == null || motivo.isBlank()) {
+            throw new RegraDeNegocioException("Motivo do suprimento é obrigatório.");
+        }
+        if (valor.isNegativo() || valor.isZero()) {
+            throw new RegraDeNegocioException("Valor para suprimento deve ser estritamente positivo.");
+        }
+        this.saldoDinheiro = this.saldoDinheiro.somar(valor);
+    }
+
+    public void sangria(Dinheiro valor) {
+        realizarSangria(valor, "Sangria avulsa");
+    }
+
+    public void fechar(Instant agora) {
         validarCaixaAberto();
         this.status = StatusCaixa.FECHADO;
-        this.fechadoEm = LocalDateTime.now();
+        this.fechadoEm = Objects.requireNonNull(agora, "Data/hora de fechamento não pode ser nula.");
+    }
+
+    public void fechar() {
+        fechar(Instant.now());
     }
 
     public boolean isAberto() {
@@ -108,11 +146,11 @@ public class Caixa {
         return status;
     }
 
-    public LocalDateTime getAbertoEm() {
+    public Instant getAbertoEm() {
         return abertoEm;
     }
 
-    public LocalDateTime getFechadoEm() {
+    public Instant getFechadoEm() {
         return fechadoEm;
     }
 }

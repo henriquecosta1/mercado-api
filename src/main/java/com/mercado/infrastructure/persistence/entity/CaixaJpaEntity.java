@@ -11,7 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -35,10 +35,10 @@ public class CaixaJpaEntity extends PanacheEntityBase {
     public String status;
 
     @Column(name = "aberto_em", nullable = false)
-    public LocalDateTime abertoEm;
+    public Instant abertoEm;
 
     @Column(name = "fechado_em")
-    public LocalDateTime fechadoEm;
+    public Instant fechadoEm;
 
     public CaixaJpaEntity() {
     }

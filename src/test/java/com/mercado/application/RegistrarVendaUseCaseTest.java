@@ -215,5 +215,12 @@ class RegistrarVendaUseCaseTest {
         public Optional<Venda> buscarPorId(TenantId tenantId, UUID id) {
             return Optional.ofNullable(store.get(id));
         }
+
+        @Override
+        public List<Venda> listarPorCaixa(TenantId tenantId, UUID caixaId) {
+            return store.values().stream()
+                .filter(v -> v.getTenantId().equals(tenantId) && v.getCaixaId().equals(caixaId))
+                .toList();
+        }
     }
 }

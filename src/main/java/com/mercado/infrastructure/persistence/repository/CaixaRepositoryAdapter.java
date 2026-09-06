@@ -22,10 +22,20 @@ public class CaixaRepositoryAdapter implements CaixaRepository, PanacheRepositor
     }
 
     @Override
+    public Optional<Caixa> buscarAberto(TenantId tenantId) {
+        return buscarCaixaAberto(tenantId);
+    }
+
+    @Override
     public Optional<Caixa> buscarPorId(TenantId tenantId, UUID id) {
         return find("tenantId = ?1 and id = ?2", tenantId.valor(), id)
             .firstResultOptional()
             .map(CaixaJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<Caixa> buscarPorId(UUID id, TenantId tenantId) {
+        return buscarPorId(tenantId, id);
     }
 
     @Override

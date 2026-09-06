@@ -14,7 +14,15 @@ public interface CaixaRepository {
 
     Optional<Caixa> buscarCaixaAberto(TenantId tenantId);
 
+    default Optional<Caixa> buscarAberto(TenantId tenantId) {
+        return buscarCaixaAberto(tenantId);
+    }
+
     Optional<Caixa> buscarPorId(TenantId tenantId, UUID id);
+
+    default Optional<Caixa> buscarPorId(UUID id, TenantId tenantId) {
+        return buscarPorId(tenantId, id);
+    }
 
     void salvar(Caixa caixa);
 

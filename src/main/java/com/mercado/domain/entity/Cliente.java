@@ -79,6 +79,18 @@ public class Cliente {
         this.saldoDevedor = this.saldoDevedor.subtrair(valorPago);
     }
 
+    public void estornarDebito(Dinheiro valor) {
+        Objects.requireNonNull(valor, "Valor para estorno não pode ser nulo.");
+        if (valor.isNegativo() || valor.isZero()) {
+            throw new RegraDeNegocioException("Valor para estorno deve ser estritamente positivo.");
+        }
+        if (valor.isMaiorQue(this.saldoDevedor)) {
+            this.saldoDevedor = Dinheiro.zero();
+        } else {
+            this.saldoDevedor = this.saldoDevedor.subtrair(valor);
+        }
+    }
+
     public void atualizarLimiteCredito(Dinheiro novoLimite) {
         Objects.requireNonNull(novoLimite, "Novo limite de crédito não pode ser nulo.");
         if (novoLimite.isNegativo()) {
