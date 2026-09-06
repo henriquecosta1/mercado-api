@@ -3,6 +3,7 @@ package com.mercado.domain.repository;
 import com.mercado.domain.entity.Cliente;
 import com.mercado.domain.valueobject.TenantId;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,6 +21,12 @@ public interface ClienteRepository {
     List<Cliente> listarComSaldoDevedor(TenantId tenantId);
 
     List<Cliente> buscarPorNome(String nome, TenantId tenantId);
+
+    default BigDecimal somarTotalSaldoDevedor(TenantId tenantId) {
+        return listarComSaldoDevedor(tenantId).stream()
+            .map(c -> c.getSaldoDevedor().valor())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 
     void salvar(Cliente cliente);
 

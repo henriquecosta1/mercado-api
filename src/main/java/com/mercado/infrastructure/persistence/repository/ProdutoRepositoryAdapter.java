@@ -5,6 +5,7 @@ import com.mercado.domain.repository.ProdutoRepository;
 import com.mercado.domain.valueobject.TenantId;
 import com.mercado.infrastructure.persistence.entity.ProdutoJpaEntity;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
+import io.quarkus.panache.common.Parameters;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
@@ -48,5 +49,41 @@ public class ProdutoRepositoryAdapter implements ProdutoRepository, PanacheRepos
             .stream()
             .map(ProdutoJpaEntity::toDomain)
             .toList();
+    }
+
+    @Override
+    public List<Produto> listarGerencial(TenantId tenantId, String busca, String categoria, Boolean apenasEstoqueBaixo) {
+        StringBuilder query = new StringBuilder("tenantId = :tenantId");
+        Parameters params = Parameters.with("tenantId", tenantId.valor());
+
+        if (busca != null && !busca.isBlank()) {
+            query.append(" and lower(nome) like :busca");
+            params.and("busca", "%" + busca.trim().toLowerCase() + "%");
+        }
+
+        if (categoria != null && !categoria.isBlank() && !categoria.equalsIgnoreCase("Todas")) {
+            query.append(" and lower(categoria) = :categoria");
+            params.and("categoria", categoria.trim().toLowerCase());
+        }
+
+        if (apenasEstoqueBaixo != null && apenasEstoqueBaixo) {
+            query.append(" and estoqueAtual <= estoqueMinimo");
+        }
+
+        query.append(" order by nome asc");
+
+        return find(query.toString(), params)
+            .list()
+            .stream()
+            .map(ProdutoJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    public void excluirOuInativar(UUID id, TenantId tenantId) {
+        ProdutoJpaEntity entity = find("tenantId = ?1 and id = ?2", tenantId.valor(), id).firstResult();
+        if (entity != null) {
+            entity.ativo = false;
+        }
     }
 }

@@ -65,4 +65,72 @@ class ProdutoTest {
 
         assertEquals(new BigDecimal("4.50"), produto.getPrecoVenda().valor());
     }
+
+    @Test
+    @DisplayName("Deve verificar alerta de estoque abaixo do mínimo")
+    void deveVerificarAlertaEstoqueBaixo() {
+        Produto produto = Produto.criar(
+            tenantId,
+            "Sabonete",
+            "Higiene",
+            Dinheiro.de("3.00"),
+            Dinheiro.de("1.50"),
+            "UN",
+            new BigDecimal("5.000"),
+            new BigDecimal("10.000")
+        );
+
+        // Estoque atual (5.000) <= Estoque mínimo (10.000) -> deve dar alerta
+        assertTrue(produto.isEstoqueAbaixoDoMinimo());
+
+        produto.reporEstoque(new BigDecimal("10.000")); // Novo estoque 15.000
+        assertFalse(produto.isEstoqueAbaixoDoMinimo());
+    }
+
+    @Test
+    @DisplayName("Deve ajustar estoque físico manualmente e falhar com valor negativo")
+    void deveAjustarEstoque() {
+        Produto produto = Produto.criar(tenantId, "Café 500g", Dinheiro.de("15.00"), "PCT", new BigDecimal("10.000"));
+        produto.ajustarEstoque(new BigDecimal("8.000"), "Contagem de inventário");
+
+        assertEquals(new BigDecimal("8.000"), produto.getEstoqueAtual());
+
+        assertThrows(RegraDeNegocioException.class,
+            () -> produto.ajustarEstoque(new BigDecimal("-1.000"), "Inventário"));
+    }
+
+    @Test
+    @DisplayName("Deve inativar e reativar produto")
+    void deveInativarEAtivarProduto() {
+        Produto produto = Produto.criar(tenantId, "Suco 1L", Dinheiro.de("8.00"), "UN", new BigDecimal("10.000"));
+        assertTrue(produto.isAtivo());
+
+        produto.inativar();
+        assertFalse(produto.isAtivo());
+
+        produto.ativar();
+        assertTrue(produto.isAtivo());
+    }
+
+    @Test
+    @DisplayName("Deve atualizar dados completos do produto")
+    void deveAtualizarDadosCompletos() {
+        Produto produto = Produto.criar(tenantId, "Leite", Dinheiro.de("4.00"), "UN", new BigDecimal("10.000"));
+
+        produto.atualizarDados(
+            "Leite Integral Tipo A",
+            "Laticínios",
+            Dinheiro.de("5.50"),
+            Dinheiro.de("3.80"),
+            "L",
+            new BigDecimal("15.000")
+        );
+
+        assertEquals("Leite Integral Tipo A", produto.getNome());
+        assertEquals("Laticínios", produto.getCategoria());
+        assertEquals(new BigDecimal("5.50"), produto.getPrecoVenda().valor());
+        assertEquals(new BigDecimal("3.80"), produto.getPrecoCusto().valor());
+        assertEquals("L", produto.getUnidade());
+        assertEquals(new BigDecimal("15.000"), produto.getEstoqueMinimo());
+    }
 }

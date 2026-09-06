@@ -7,6 +7,7 @@ import com.mercado.infrastructure.persistence.entity.ClienteJpaEntity;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -57,6 +58,14 @@ public class ClienteRepositoryAdapter implements ClienteRepository, PanacheRepos
             .stream()
             .map(ClienteJpaEntity::toDomain)
             .toList();
+    }
+
+    @Override
+    public BigDecimal somarTotalSaldoDevedor(TenantId tenantId) {
+        BigDecimal total = find("select coalesce(sum(c.saldoDevedor), 0) from ClienteJpaEntity c where c.tenantId = ?1 and c.saldoDevedor > 0", tenantId.valor())
+            .project(BigDecimal.class)
+            .firstResult();
+        return total != null ? total.setScale(2, java.math.RoundingMode.HALF_EVEN) : java.math.BigDecimal.ZERO.setScale(2);
     }
 
     @Override
