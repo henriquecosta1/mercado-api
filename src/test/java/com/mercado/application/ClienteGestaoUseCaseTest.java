@@ -111,6 +111,9 @@ class ClienteGestaoUseCaseTest {
         List<ClienteDTO> bloqueados = listarClientesUseCase.executar(tenantIdRaw, null, "BLOQUEADO", false);
         assertEquals(1, bloqueados.size());
         assertEquals("Cliente Bloqueado", bloqueados.get(0).nome());
+        assertEquals("BLOQUEADO", bloqueados.get(0).status());
+        assertEquals("Inadimplência prolongada", bloqueados.get(0).motivoBloqueio());
+        assertEquals(10, bloqueados.get(0).diaVencimento());
     }
 
     @Test
