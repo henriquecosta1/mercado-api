@@ -413,7 +413,25 @@ Erros do domínio e validações retornam payloads padronizados via [`DomainExce
 | **`403 Forbidden`** | PIN de gerente incorreto ou ausente para operação sensível |
 | **`404 Not Found`** | Recurso (produto, cliente, caixa ou venda) não encontrado |
 | **`422 Unprocessable Entity`** | Regra de negócio violada (saldo insuficiente, cliente bloqueado, etc.) |
+| **`429 Too Many Requests`** | Cota de requisições excedida ou defesa de força bruta ativada (`Retry-After: 60`) |
 | **`500 Internal Server Error`** | Falha técnica inesperada |
+
+---
+
+## 🛡️ Proteção contra Força Bruta & Rate Limiting
+
+A API implementa proteção volumétrica e de força bruta via Token Bucket in-memory com **Bucket4j** e cache **Caffeine**:
+
+* **Filtro JAX-RS:** [`RateLimitFilter`](file:///C:/Projetos%20pessoais/mercado/mercado-api/src/main/java/com/mercado/api/filter/RateLimitFilter.java) com extração de IP real (`X-Forwarded-For`, `X-Real-IP` ou socket TCP).
+* **Serviço de Cotas:** [`RateLimiterService`](file:///C:/Projetos%20pessoais/mercado/mercado-api/src/main/java/com/mercado/infrastructure/security/RateLimiterService.java)
+* **Políticas Configuradas:**
+  * `POST /api/onboarding`: 3 requisições por minuto / IP.
+  * `POST /api/auth/login`: 5 tentativas por minuto / IP (defesa contra ataque de dicionário).
+  * `POST /api/seguranca/validar-pin`: 5 tentativas por minuto / IP por Tenant.
+  * Demais rotas da API: 100 requisições por minuto / IP.
+* **Resposta de Bloqueio (429):**
+  * Cabeçalho: `Retry-After: 60`
+  * Body: `{"erro": "Muitas tentativas de login. Aguarde um minuto para tentar de novo."}`
 
 ---
 

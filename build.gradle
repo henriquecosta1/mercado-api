@@ -17,6 +17,8 @@ dependencies {
     implementation 'io.quarkus:quarkus-arc'
     implementation 'io.quarkus:quarkus-smallrye-jwt'
     implementation 'org.mindrot:jbcrypt:0.4'
+    implementation 'com.bucket4j:bucket4j-core:8.10.1'
+    implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
     testImplementation 'io.quarkus:quarkus-junit5'
 }
 
