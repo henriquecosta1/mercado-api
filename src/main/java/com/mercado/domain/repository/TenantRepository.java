@@ -12,6 +12,8 @@ public interface TenantRepository {
 
     Optional<Tenant> buscarPorId(TenantId id);
 
+    java.util.List<Tenant> listarTodos();
+
     void salvar(Tenant tenant);
 
     void atualizar(Tenant tenant);

@@ -88,10 +88,25 @@ public class AutenticarUsuarioUseCase {
             throw new RegraDeNegocioException("Credenciais invalidas.");
         }
 
-        // Busca o nome do estabelecimento (Tenant)
-        String nomeMercado = tenantRepository.buscarPorId(usuarioAutenticado.getTenantId())
-            .map(Tenant::getNome)
-            .orElse("");
+        // Busca o estabelecimento (Tenant) e valida o status da licença
+        Tenant tenant = tenantRepository.buscarPorId(usuarioAutenticado.getTenantId())
+            .orElseThrow(() -> new RegraDeNegocioException("Estabelecimento não encontrado."));
+
+        if (tenant.isPendente()) {
+            throw new com.mercado.domain.exception.AcessoTenantBloqueadoException(
+                "TENANT_PENDENTE",
+                "Estabelecimento aguardando liberação do administrador."
+            );
+        }
+
+        if (tenant.isVencido() || tenant.getStatus() == com.mercado.domain.entity.StatusTenant.BLOQUEADO) {
+            throw new com.mercado.domain.exception.AcessoTenantBloqueadoException(
+                "TENANT_VENCIDO",
+                "Mensalidade do sistema expirada. Regularize seu acesso."
+            );
+        }
+
+        String nomeMercado = tenant.getNome();
 
         Instant agora = Instant.now();
         Instant expiraEm = agora.plus(EXPIRACAO_PADRAO);

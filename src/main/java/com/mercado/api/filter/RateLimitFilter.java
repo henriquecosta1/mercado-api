@@ -61,8 +61,8 @@ public class RateLimitFilter implements ContainerRequestFilter {
 
         String ip = extrairIp(requestContext);
 
-        // 1. Endpoint sensivel: Onboarding (POST /api/onboarding ou /onboarding)
-        if ("POST".equalsIgnoreCase(method) && (path.equals("/api/onboarding") || path.equals("/onboarding"))) {
+        // 1. Endpoint sensivel: Onboarding e Cadastro de Comercio (POST /api/onboarding, /onboarding, /api/auth/cadastrar-comercio, /auth/cadastrar-comercio)
+        if ("POST".equalsIgnoreCase(method) && (path.equals("/api/onboarding") || path.equals("/onboarding") || path.equals("/api/auth/cadastrar-comercio") || path.equals("/auth/cadastrar-comercio"))) {
             if (!rateLimiterService.tentarConsumirOnboarding(ip)) {
                 abortarCom429(requestContext, "Muitas tentativas de cadastro. Aguarde um minuto antes de tentar novamente.");
                 return;

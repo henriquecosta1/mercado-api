@@ -108,6 +108,11 @@ class OnboardingMercadoUseCaseTest {
         }
 
         @Override
+        public List<Tenant> listarTodos() {
+            return List.copyOf(store.values());
+        }
+
+        @Override
         public void salvar(Tenant tenant) {
             store.put(tenant.getId(), tenant);
         }

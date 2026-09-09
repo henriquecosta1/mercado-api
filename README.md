@@ -242,6 +242,7 @@ O Quarkus possui suporte a **Live Reload** instantâneo:
 | **`V9__evoluir_cadastro_clientes.sql`** | Campos `apelido`, `cpf`, `endereco`, `dia_vencimento` e `status` (*ATIVO/BLOQUEADO*). |
 | **`V10__criar_categorias_produto.sql`** | Tabela `categorias_produto` para categorias customizadas por tenant e seed inicial. |
 | **`V11__corrigir_pin_gerente_padrao.sql`** | Atualização do hash BCrypt do PIN padrão `'1234'` para todos os tenants. |
+| **`V12__adicionar_controle_licenca_tenant.sql`** | Colunas `status` (*ATIVO/PENDENTE/BLOQUEADO*), `data_expiracao_licenca` e `whatsapp` em `tenants`. |
 
 ---
 
@@ -254,11 +255,12 @@ O Quarkus possui suporte a **Live Reload** instantâneo:
 
 ---
 
-### 🔑 1. Autenticação & Onboarding
+### 🔑 1. Autenticação, Onboarding & Auto-cadastro
 
 | Método | Rota | Descrição | Acesso |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/api/auth/login` | Autentica operador/gerente por login e senha | **Público** (`@PermitAll`) |
+| `POST` | `/api/auth/cadastrar-comercio` | Auto-cadastro público de novo comércio (status `PENDENTE`) | **Público** (`@PermitAll`) |
 | `GET` | `/api/auth/me` | Retorna dados do usuário autenticado no JWT | Protegido (`@Authenticated`) |
 | `POST` | `/api/onboarding` | Cadastra novo mercado, administrador e categorias | **Público** (`@PermitAll`) |
 
@@ -406,6 +408,20 @@ O Quarkus possui suporte a **Live Reload** instantâneo:
 | :--- | :--- | :--- |
 | `POST` | `/api/seguranca/validar-pin` | Valida credencial numérica do gerente (`pin`) |
 | `PUT` | `/api/seguranca/alterar-pin` | Altera o PIN do tenant (`pinAtual`, `novoPin` de 4 a 6 dígitos) |
+
+---
+
+### 🛡️ 9. Gestão Administrativa de Licenças de Tenants
+
+> 🔐 **Autenticação Administrativa:**  
+> As rotas administrativas exigem a chave secreta via cabeçalho HTTP:  
+> **`X-Admin-Key: <mercado.admin.secret-key>`** (Padrão de desenvolvimento: `admin123`).
+
+| Método | Rota | Descrição |
+| :--- | :--- | :--- |
+| `GET` | `/api/admin/tenants` | Lista todos os estabelecimentos, status e datas de expiração |
+| `PUT` | `/api/admin/tenants/{id}/ativar` | Ativa ou renova a licença do tenant por X dias (`diasValidade`) |
+| `PUT` | `/api/admin/tenants/{id}/suspender` | Suspende o acesso de um tenant (bloqueio por inadimplência) |
 
 ---
 

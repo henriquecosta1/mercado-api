@@ -1,9 +1,13 @@
 package com.mercado.api.resource;
 
+import com.mercado.api.dto.CadastroComercioRequest;
 import com.mercado.api.dto.LoginRequest;
+import com.mercado.application.dto.CadastroComercioInput;
+import com.mercado.application.dto.CadastroComercioOutput;
 import com.mercado.application.dto.LoginInput;
 import com.mercado.application.dto.LoginOutput;
 import com.mercado.application.usecase.AutenticarUsuarioUseCase;
+import com.mercado.application.usecase.CadastrarComercioUseCase;
 import com.mercado.domain.entity.Tenant;
 import com.mercado.domain.repository.TenantRepository;
 import com.mercado.domain.repository.UsuarioRepository;
@@ -25,9 +29,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Recurso REST de Autenticacao JWT.
+ * Recurso REST de Autenticacao JWT e Auto-cadastro de Estabelecimentos.
  * <ul>
  *   <li>POST /auth/login - publico, emite Bearer token com claims de tenant, perfil e nome do mercado</li>
+ *   <li>POST /auth/cadastrar-comercio - publico, auto-cadastro de novos estabelecimentos (status PENDENTE)</li>
  *   <li>GET  /auth/me    - protegido, retorna dados do usuario autenticado e nome do mercado</li>
  * </ul>
  */
@@ -37,16 +42,19 @@ import java.util.Objects;
 public class AuthResource {
 
     private final AutenticarUsuarioUseCase autenticarUsuarioUseCase;
+    private final CadastrarComercioUseCase cadastrarComercioUseCase;
     private final UsuarioRepository usuarioRepository;
     private final TenantRepository tenantRepository;
     private final TenantSecurityContext securityContext;
 
     @Inject
     public AuthResource(AutenticarUsuarioUseCase autenticarUsuarioUseCase,
+                        CadastrarComercioUseCase cadastrarComercioUseCase,
                         UsuarioRepository usuarioRepository,
                         TenantRepository tenantRepository,
                         TenantSecurityContext securityContext) {
         this.autenticarUsuarioUseCase = Objects.requireNonNull(autenticarUsuarioUseCase, "AutenticarUsuarioUseCase e obrigatorio.");
+        this.cadastrarComercioUseCase = Objects.requireNonNull(cadastrarComercioUseCase, "CadastrarComercioUseCase e obrigatorio.");
         this.usuarioRepository = Objects.requireNonNull(usuarioRepository, "UsuarioRepository e obrigatorio.");
         this.tenantRepository = Objects.requireNonNull(tenantRepository, "TenantRepository e obrigatorio.");
         this.securityContext = Objects.requireNonNull(securityContext, "TenantSecurityContext e obrigatorio.");
@@ -73,6 +81,34 @@ public class AuthResource {
 
         LoginOutput output = autenticarUsuarioUseCase.executar(input);
         return Response.ok(output).build();
+    }
+
+    /**
+     * Endpoint publico para auto-cadastro de novos comercios/estabelecimentos.
+     * Cria o Tenant com status PENDENTE para aprovacao administrativa e registra o primeiro Gerente.
+     */
+    @POST
+    @Path("/cadastrar-comercio")
+    @PermitAll
+    @RunOnVirtualThread
+    public Response cadastrarComercio(CadastroComercioRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("O corpo da requisicao nao pode ser vazio.");
+        }
+
+        CadastroComercioInput input = new CadastroComercioInput(
+            request.nomeComercio(),
+            request.whatsapp(),
+            request.nomeGerente(),
+            request.login(),
+            request.senha(),
+            request.pinGerente()
+        );
+
+        CadastroComercioOutput output = cadastrarComercioUseCase.executar(input);
+        return Response.status(Response.Status.CREATED)
+            .entity(output)
+            .build();
     }
 
     /**

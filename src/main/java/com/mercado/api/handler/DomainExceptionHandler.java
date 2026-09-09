@@ -19,6 +19,16 @@ public class DomainExceptionHandler implements ExceptionMapper<Exception> {
                 .build();
         }
 
+        if (exception instanceof com.mercado.domain.exception.AcessoTenantBloqueadoException e) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .type(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
+                .entity(java.util.Map.of(
+                    "codigo", e.getCodigo(),
+                    "mensagem", e.getMensagem()
+                ))
+                .build();
+        }
+
         if (exception instanceof com.mercado.domain.exception.PinInvalidoException e) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(ErrorResponse.of("Acesso Negado", e.getMessage(), Response.Status.FORBIDDEN.getStatusCode()))

@@ -91,6 +91,46 @@ class AutenticarUsuarioUseCaseTest {
         assertThrows(RegraDeNegocioException.class, () -> useCase.executar(input));
     }
 
+    @Test
+    @DisplayName("Deve bloquear login quando tenant estiver com status PENDENTE")
+    void deveBloquearLoginTenantPendente() {
+        TenantId tenantPendenteId = TenantId.de(UUID.randomUUID());
+        Tenant tPendente = Tenant.autoCadastrar("Padaria Nova", "11999998888", "1234");
+        tenantRepository.salvar(tPendente);
+
+        Usuario userPendente = Usuario.criar(tPendente.getId(), "Jose", "jose.padaria", "12345678", Usuario.Perfil.GERENTE);
+        usuarioRepository.salvar(userPendente);
+
+        LoginInput input = new LoginInput("jose.padaria", "12345678");
+        com.mercado.domain.exception.AcessoTenantBloqueadoException ex = assertThrows(
+            com.mercado.domain.exception.AcessoTenantBloqueadoException.class,
+            () -> useCase.executar(input)
+        );
+
+        assertEquals("TENANT_PENDENTE", ex.getCodigo());
+        assertTrue(ex.getMensagem().contains("aguardando liberação"));
+    }
+
+    @Test
+    @DisplayName("Deve bloquear login quando tenant estiver BLOQUEADO ou VENCIDO")
+    void deveBloquearLoginTenantVencido() {
+        TenantId tenantVencidoId = TenantId.de(UUID.randomUUID());
+        Tenant tVencido = new Tenant(tenantVencidoId, "Mercado Vencido", "11888887777", com.mercado.domain.entity.StatusTenant.ATIVO, java.time.Instant.now().minus(java.time.Duration.ofDays(1)), com.mercado.domain.valueobject.PinGerente.criar("1234"));
+        tenantRepository.salvar(tVencido);
+
+        Usuario userVencido = Usuario.criar(tVencido.getId(), "Mario", "mario.vencido", "12345678", Usuario.Perfil.GERENTE);
+        usuarioRepository.salvar(userVencido);
+
+        LoginInput input = new LoginInput("mario.vencido", "12345678");
+        com.mercado.domain.exception.AcessoTenantBloqueadoException ex = assertThrows(
+            com.mercado.domain.exception.AcessoTenantBloqueadoException.class,
+            () -> useCase.executar(input)
+        );
+
+        assertEquals("TENANT_VENCIDO", ex.getCodigo());
+        assertTrue(ex.getMensagem().contains("Mensalidade do sistema expirada"));
+    }
+
     static class FakeUsuarioRepository implements UsuarioRepository {
         private final Map<UUID, Usuario> store = new HashMap<>();
 
@@ -126,6 +166,11 @@ class AutenticarUsuarioUseCaseTest {
         @Override
         public Optional<Tenant> buscarPorId(TenantId id) {
             return Optional.ofNullable(store.get(id));
+        }
+
+        @Override
+        public List<Tenant> listarTodos() {
+            return List.copyOf(store.values());
         }
 
         @Override

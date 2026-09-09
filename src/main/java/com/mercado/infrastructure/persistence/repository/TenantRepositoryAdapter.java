@@ -20,6 +20,13 @@ public class TenantRepositoryAdapter implements TenantRepository, PanacheReposit
     }
 
     @Override
+    public java.util.List<Tenant> listarTodos() {
+        return listAll().stream()
+            .map(TenantJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
     public void salvar(Tenant tenant) {
         persist(TenantJpaEntity.fromDomain(tenant));
     }
