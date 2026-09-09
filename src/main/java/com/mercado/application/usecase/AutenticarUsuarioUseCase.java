@@ -2,8 +2,10 @@ package com.mercado.application.usecase;
 
 import com.mercado.application.dto.LoginInput;
 import com.mercado.application.dto.LoginOutput;
+import com.mercado.domain.entity.Tenant;
 import com.mercado.domain.entity.Usuario;
 import com.mercado.domain.exception.RegraDeNegocioException;
+import com.mercado.domain.repository.TenantRepository;
 import com.mercado.domain.repository.UsuarioRepository;
 import com.mercado.domain.valueobject.TenantId;
 import io.smallrye.jwt.build.Jwt;
@@ -19,14 +21,15 @@ import java.util.UUID;
 
 /**
  * Caso de uso: autentica um usuario validando login/senha via BCrypt e
- * emite um JWT SmallRye contendo as claims de tenant e perfil.
+ * emite um JWT SmallRye contendo as claims de tenant, perfil e nome do mercado.
  *
  * Claims emitidas no token:
- *   - sub       : UUID do usuario
- *   - upn       : login do usuario
- *   - groups    : Set com o perfil (GERENTE ou OPERADOR)
- *   - tenant_id : UUID do tenant como String
- *   - nome      : nome completo do usuario
+ *   - sub          : UUID do usuario
+ *   - upn          : login do usuario
+ *   - groups       : Set com o perfil (GERENTE ou OPERADOR)
+ *   - tenant_id    : UUID do tenant como String
+ *   - nome         : nome completo do usuario
+ *   - nome_mercado : nome oficial do mercado/estabelecimento
  */
 @ApplicationScoped
 public class AutenticarUsuarioUseCase {
@@ -34,13 +37,16 @@ public class AutenticarUsuarioUseCase {
     private static final Duration EXPIRACAO_PADRAO = Duration.ofHours(8);
 
     private final UsuarioRepository usuarioRepository;
+    private final TenantRepository tenantRepository;
     private final String issuer;
 
     @Inject
     public AutenticarUsuarioUseCase(
             UsuarioRepository usuarioRepository,
+            TenantRepository tenantRepository,
             @ConfigProperty(name = "mp.jwt.verify.issuer", defaultValue = "mercado-api") String issuer) {
         this.usuarioRepository = Objects.requireNonNull(usuarioRepository, "UsuarioRepository e obrigatorio.");
+        this.tenantRepository = Objects.requireNonNull(tenantRepository, "TenantRepository e obrigatorio.");
         this.issuer = issuer;
     }
 
@@ -82,6 +88,11 @@ public class AutenticarUsuarioUseCase {
             throw new RegraDeNegocioException("Credenciais invalidas.");
         }
 
+        // Busca o nome do estabelecimento (Tenant)
+        String nomeMercado = tenantRepository.buscarPorId(usuarioAutenticado.getTenantId())
+            .map(Tenant::getNome)
+            .orElse("");
+
         Instant agora = Instant.now();
         Instant expiraEm = agora.plus(EXPIRACAO_PADRAO);
 
@@ -91,6 +102,7 @@ public class AutenticarUsuarioUseCase {
             .groups(Set.of(usuarioAutenticado.getPerfil().name()))
             .claim("tenant_id", usuarioAutenticado.getTenantId().valor().toString())
             .claim("nome", usuarioAutenticado.getNome())
+            .claim("nome_mercado", nomeMercado)
             .issuedAt(agora)
             .expiresAt(expiraEm)
             .sign();
@@ -100,6 +112,7 @@ public class AutenticarUsuarioUseCase {
             usuarioAutenticado.getNome(),
             usuarioAutenticado.getPerfil().name(),
             usuarioAutenticado.getTenantId().valor(),
+            nomeMercado,
             expiraEm
         );
     }

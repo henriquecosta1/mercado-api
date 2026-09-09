@@ -3,8 +3,10 @@ package com.mercado.application;
 import com.mercado.application.dto.LoginInput;
 import com.mercado.application.dto.LoginOutput;
 import com.mercado.application.usecase.AutenticarUsuarioUseCase;
+import com.mercado.domain.entity.Tenant;
 import com.mercado.domain.entity.Usuario;
 import com.mercado.domain.exception.RegraDeNegocioException;
+import com.mercado.domain.repository.TenantRepository;
 import com.mercado.domain.repository.UsuarioRepository;
 import com.mercado.domain.valueobject.TenantId;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class AutenticarUsuarioUseCaseTest {
 
     private FakeUsuarioRepository usuarioRepository;
+    private FakeTenantRepository tenantRepository;
     private AutenticarUsuarioUseCase useCase;
 
     private final TenantId tenant1 = TenantId.de(UUID.randomUUID());
@@ -27,7 +30,15 @@ class AutenticarUsuarioUseCaseTest {
     @BeforeEach
     void setUp() {
         usuarioRepository = new FakeUsuarioRepository();
-        useCase = new AutenticarUsuarioUseCase(usuarioRepository, "mercado-api");
+        tenantRepository = new FakeTenantRepository();
+        useCase = new AutenticarUsuarioUseCase(usuarioRepository, tenantRepository, "mercado-api");
+
+        // Tenants
+        Tenant t1 = new Tenant(tenant1, "Mercado Central", com.mercado.domain.valueobject.PinGerente.criar("1234"));
+        tenantRepository.salvar(t1);
+
+        Tenant t2 = new Tenant(tenant2, "Supermercado Progresso", com.mercado.domain.valueobject.PinGerente.criar("1234"));
+        tenantRepository.salvar(t2);
 
         // Usuário no Tenant 1
         Usuario u1 = Usuario.criar(tenant1, "Roberio Gerente", "roberio", "12345678", Usuario.Perfil.GERENTE);
@@ -39,7 +50,7 @@ class AutenticarUsuarioUseCaseTest {
     }
 
     @Test
-    @DisplayName("Deve autenticar roberio sem informar tenantId e identificar o tenantId correto")
+    @DisplayName("Deve autenticar roberio sem informar tenantId e identificar o tenantId e nomeMercado corretos")
     void deveAutenticarRoberioSemTenantId() {
         LoginInput input = new LoginInput("roberio", "12345678");
         LoginOutput output = useCase.executar(input);
@@ -49,10 +60,11 @@ class AutenticarUsuarioUseCaseTest {
         assertEquals("Roberio Gerente", output.nome());
         assertEquals("GERENTE", output.perfil());
         assertEquals(tenant1.valor(), output.tenantId());
+        assertEquals("Mercado Central", output.nomeMercado());
     }
 
     @Test
-    @DisplayName("Deve autenticar daniel sem informar tenantId e identificar o tenantId correto")
+    @DisplayName("Deve autenticar daniel sem informar tenantId e identificar o tenantId e nomeMercado corretos")
     void deveAutenticarDanielSemTenantId() {
         LoginInput input = new LoginInput("daniel", "12345678");
         LoginOutput output = useCase.executar(input);
@@ -62,6 +74,7 @@ class AutenticarUsuarioUseCaseTest {
         assertEquals("Daniel Operador", output.nome());
         assertEquals("OPERADOR", output.perfil());
         assertEquals(tenant2.valor(), output.tenantId());
+        assertEquals("Supermercado Progresso", output.nomeMercado());
     }
 
     @Test
@@ -104,6 +117,25 @@ class AutenticarUsuarioUseCaseTest {
         @Override
         public void salvar(Usuario usuario) {
             store.put(usuario.getId(), usuario);
+        }
+    }
+
+    static class FakeTenantRepository implements TenantRepository {
+        private final Map<TenantId, Tenant> store = new HashMap<>();
+
+        @Override
+        public Optional<Tenant> buscarPorId(TenantId id) {
+            return Optional.ofNullable(store.get(id));
+        }
+
+        @Override
+        public void salvar(Tenant tenant) {
+            store.put(tenant.getId(), tenant);
+        }
+
+        @Override
+        public void atualizar(Tenant tenant) {
+            store.put(tenant.getId(), tenant);
         }
     }
 }

@@ -93,6 +93,7 @@ public class OnboardingMercadoUseCase {
             .groups(Set.of(admin.getPerfil().name()))
             .claim("tenant_id", admin.getTenantId().valor().toString())
             .claim("nome", admin.getNome())
+            .claim("nome_mercado", tenant.getNome())
             .issuedAt(agora)
             .expiresAt(expiraEm)
             .sign();
@@ -102,6 +103,7 @@ public class OnboardingMercadoUseCase {
             admin.getNome(),
             admin.getPerfil().name(),
             admin.getTenantId().valor(),
+            tenant.getNome(),
             expiraEm
         );
     }

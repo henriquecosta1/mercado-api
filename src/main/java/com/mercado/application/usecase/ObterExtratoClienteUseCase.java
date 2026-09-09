@@ -5,10 +5,12 @@ import com.mercado.application.dto.ItemExtratoDTO;
 import com.mercado.application.dto.TransacaoExtratoDTO;
 import com.mercado.domain.entity.Amortizacao;
 import com.mercado.domain.entity.Cliente;
+import com.mercado.domain.entity.Tenant;
 import com.mercado.domain.entity.Venda;
 import com.mercado.domain.exception.RecursoNaoEncontradoException;
 import com.mercado.domain.repository.AmortizacaoRepository;
 import com.mercado.domain.repository.ClienteRepository;
+import com.mercado.domain.repository.TenantRepository;
 import com.mercado.domain.repository.VendaRepository;
 import com.mercado.domain.valueobject.TenantId;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -31,14 +33,17 @@ public class ObterExtratoClienteUseCase {
     private final ClienteRepository clienteRepository;
     private final VendaRepository vendaRepository;
     private final AmortizacaoRepository amortizacaoRepository;
+    private final TenantRepository tenantRepository;
 
     @Inject
     public ObterExtratoClienteUseCase(ClienteRepository clienteRepository,
                                      VendaRepository vendaRepository,
-                                     AmortizacaoRepository amortizacaoRepository) {
+                                     AmortizacaoRepository amortizacaoRepository,
+                                     TenantRepository tenantRepository) {
         this.clienteRepository = Objects.requireNonNull(clienteRepository, "ClienteRepository é obrigatório.");
         this.vendaRepository = Objects.requireNonNull(vendaRepository, "VendaRepository é obrigatório.");
         this.amortizacaoRepository = Objects.requireNonNull(amortizacaoRepository, "AmortizacaoRepository é obrigatório.");
+        this.tenantRepository = Objects.requireNonNull(tenantRepository, "TenantRepository é obrigatório.");
     }
 
     public ExtratoClienteOutput executar(UUID tenantIdUuid, UUID clienteId) {
@@ -95,12 +100,18 @@ public class ObterExtratoClienteUseCase {
         // 5. Ordena da transação mais recente para a mais antiga
         transacoes.sort(Comparator.comparing(TransacaoExtratoDTO::dataHora).reversed());
 
+        // 6. Carrega o nome oficial do mercado/estabelecimento
+        String nomeMercado = tenantRepository.buscarPorId(tenantId)
+            .map(Tenant::getNome)
+            .orElse("");
+
         return new ExtratoClienteOutput(
             cliente.getId(),
             cliente.getNome(),
             cliente.getTelefone(),
             cliente.getSaldoDevedor().valor(),
             cliente.getLimiteCredito().valor(),
+            nomeMercado,
             transacoes
         );
     }

@@ -13,6 +13,7 @@ public record ExtratoClienteOutput(
     String telefone,
     BigDecimal saldoDevedorAtual,
     BigDecimal limiteCredito,
+    String nomeMercado,
     List<TransacaoExtratoDTO> transacoes
 ) {
 }

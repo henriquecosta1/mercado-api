@@ -4,6 +4,8 @@ import com.mercado.api.dto.LoginRequest;
 import com.mercado.application.dto.LoginInput;
 import com.mercado.application.dto.LoginOutput;
 import com.mercado.application.usecase.AutenticarUsuarioUseCase;
+import com.mercado.domain.entity.Tenant;
+import com.mercado.domain.repository.TenantRepository;
 import com.mercado.domain.repository.UsuarioRepository;
 import com.mercado.domain.valueobject.TenantId;
 import com.mercado.infrastructure.security.TenantSecurityContext;
@@ -25,8 +27,8 @@ import java.util.Objects;
 /**
  * Recurso REST de Autenticacao JWT.
  * <ul>
- *   <li>POST /auth/login - publico, emite Bearer token</li>
- *   <li>GET  /auth/me    - protegido, retorna dados do usuario autenticado</li>
+ *   <li>POST /auth/login - publico, emite Bearer token com claims de tenant, perfil e nome do mercado</li>
+ *   <li>GET  /auth/me    - protegido, retorna dados do usuario autenticado e nome do mercado</li>
  * </ul>
  */
 @Path("/auth")
@@ -36,14 +38,17 @@ public class AuthResource {
 
     private final AutenticarUsuarioUseCase autenticarUsuarioUseCase;
     private final UsuarioRepository usuarioRepository;
+    private final TenantRepository tenantRepository;
     private final TenantSecurityContext securityContext;
 
     @Inject
     public AuthResource(AutenticarUsuarioUseCase autenticarUsuarioUseCase,
                         UsuarioRepository usuarioRepository,
+                        TenantRepository tenantRepository,
                         TenantSecurityContext securityContext) {
         this.autenticarUsuarioUseCase = Objects.requireNonNull(autenticarUsuarioUseCase, "AutenticarUsuarioUseCase e obrigatorio.");
         this.usuarioRepository = Objects.requireNonNull(usuarioRepository, "UsuarioRepository e obrigatorio.");
+        this.tenantRepository = Objects.requireNonNull(tenantRepository, "TenantRepository e obrigatorio.");
         this.securityContext = Objects.requireNonNull(securityContext, "TenantSecurityContext e obrigatorio.");
     }
 
@@ -89,9 +94,18 @@ public class AuthResource {
         }
 
         var usuario = usuarioOpt.get();
+
+        String nomeMercado = securityContext.getNomeMercado();
+        if (nomeMercado == null || nomeMercado.isBlank()) {
+            nomeMercado = tenantRepository.buscarPorId(tenantId)
+                .map(Tenant::getNome)
+                .orElse("");
+        }
+
         return Response.ok(Map.of(
             "id", usuario.getId(),
             "tenantId", usuario.getTenantId().valor(),
+            "nomeMercado", nomeMercado != null ? nomeMercado : "",
             "nome", usuario.getNome(),
             "login", usuario.getLogin(),
             "perfil", usuario.getPerfil().name(),

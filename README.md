@@ -276,7 +276,23 @@ O Quarkus possui suporte a **Live Reload** instantâneo:
   "nome": "Administrador",
   "perfil": "GERENTE",
   "tenantId": "00000000-0000-0000-0000-000000000001",
+  "nomeMercado": "Mercado Modelo",
   "expiraEm": "2026-09-09T18:00:00Z"
+}
+```
+
+#### Exemplo de Usuário Autenticado (`GET /api/auth/me`)
+* **Headers:** `Authorization: Bearer <token>`
+* **Response (200 OK):**
+```json
+{
+  "id": "e0b96b7d-3047-4976-bce7-d64c243c3938",
+  "tenantId": "00000000-0000-0000-0000-000000000001",
+  "nomeMercado": "Mercado Modelo",
+  "nome": "Administrador",
+  "login": "admin",
+  "perfil": "GERENTE",
+  "ativo": true
 }
 ```
 

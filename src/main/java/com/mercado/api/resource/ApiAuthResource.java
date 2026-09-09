@@ -1,6 +1,7 @@
 package com.mercado.api.resource;
 
 import com.mercado.application.usecase.AutenticarUsuarioUseCase;
+import com.mercado.domain.repository.TenantRepository;
 import com.mercado.domain.repository.UsuarioRepository;
 import com.mercado.infrastructure.security.TenantSecurityContext;
 import jakarta.inject.Inject;
@@ -16,7 +17,8 @@ public class ApiAuthResource extends AuthResource {
     @Inject
     public ApiAuthResource(AutenticarUsuarioUseCase autenticarUsuarioUseCase,
                            UsuarioRepository usuarioRepository,
+                           TenantRepository tenantRepository,
                            TenantSecurityContext securityContext) {
-        super(autenticarUsuarioUseCase, usuarioRepository, securityContext);
+        super(autenticarUsuarioUseCase, usuarioRepository, tenantRepository, securityContext);
     }
 }

@@ -10,6 +10,7 @@ import com.mercado.domain.exception.RecursoNaoEncontradoException;
 import com.mercado.domain.repository.AmortizacaoRepository;
 import com.mercado.domain.repository.CaixaRepository;
 import com.mercado.domain.repository.ClienteRepository;
+import com.mercado.domain.repository.TenantRepository;
 import com.mercado.domain.repository.VendaRepository;
 import com.mercado.domain.valueobject.Dinheiro;
 import com.mercado.domain.valueobject.TenantId;
@@ -30,6 +31,7 @@ class ObterExtratoClienteUseCaseTest {
     private FakeVendaRepository vendaRepository;
     private FakeAmortizacaoRepository amortizacaoRepository;
     private FakeCaixaRepository caixaRepository;
+    private FakeTenantRepository tenantRepository;
 
     private ObterExtratoClienteUseCase extratoUseCase;
     private AmortizarFiadoUseCase amortizarFiadoUseCase;
@@ -43,11 +45,17 @@ class ObterExtratoClienteUseCaseTest {
         vendaRepository = new FakeVendaRepository();
         amortizacaoRepository = new FakeAmortizacaoRepository();
         caixaRepository = new FakeCaixaRepository();
+        tenantRepository = new FakeTenantRepository();
+
+        // Tenant
+        Tenant tenant = new Tenant(tenantId, "Mercado do Povo", com.mercado.domain.valueobject.PinGerente.criar("1234"));
+        tenantRepository.salvar(tenant);
 
         extratoUseCase = new ObterExtratoClienteUseCase(
             clienteRepository,
             vendaRepository,
-            amortizacaoRepository
+            amortizacaoRepository,
+            tenantRepository
         );
 
         amortizarFiadoUseCase = new AmortizarFiadoUseCase(
@@ -140,6 +148,7 @@ class ObterExtratoClienteUseCaseTest {
         assertEquals("11988887777", extrato.telefone());
         assertEquals(new BigDecimal("120.00"), extrato.saldoDevedorAtual());
         assertEquals(new BigDecimal("500.00"), extrato.limiteCredito());
+        assertEquals("Mercado do Povo", extrato.nomeMercado());
 
         // Validação da linha do tempo (deve conter 3 transações ordenadas da mais recente para a mais antiga)
         List<TransacaoExtratoDTO> transacoes = extrato.transacoes();
@@ -305,6 +314,25 @@ class ObterExtratoClienteUseCaseTest {
         @Override
         public void atualizar(Caixa caixa) {
             store.put(caixa.getId(), caixa);
+        }
+    }
+
+    static class FakeTenantRepository implements TenantRepository {
+        private final Map<TenantId, Tenant> store = new HashMap<>();
+
+        @Override
+        public Optional<Tenant> buscarPorId(TenantId id) {
+            return Optional.ofNullable(store.get(id));
+        }
+
+        @Override
+        public void salvar(Tenant tenant) {
+            store.put(tenant.getId(), tenant);
+        }
+
+        @Override
+        public void atualizar(Tenant tenant) {
+            store.put(tenant.getId(), tenant);
         }
     }
 }

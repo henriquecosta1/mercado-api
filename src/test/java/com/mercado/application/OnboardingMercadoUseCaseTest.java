@@ -59,6 +59,7 @@ class OnboardingMercadoUseCaseTest {
         assertEquals("Carlos Silva", output.nome());
         assertEquals("GERENTE", output.perfil());
         assertNotNull(output.tenantId());
+        assertEquals("Mercado Central", output.nomeMercado());
         assertNotNull(output.expiraEm());
 
         // Verifica persistência do Tenant

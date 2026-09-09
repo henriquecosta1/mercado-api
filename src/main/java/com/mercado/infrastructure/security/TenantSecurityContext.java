@@ -80,6 +80,15 @@ public class TenantSecurityContext {
     }
 
     /**
+     * Retorna o nome do mercado/estabelecimento a partir da claim "nome_mercado".
+     *
+     * @return nome do mercado/tenant ou null se ausente
+     */
+    public String getNomeMercado() {
+        return jwt.getClaim("nome_mercado");
+    }
+
+    /**
      * Verifica se o usuario autenticado possui o perfil de GERENTE.
      *
      * @return true se o usuario for GERENTE
