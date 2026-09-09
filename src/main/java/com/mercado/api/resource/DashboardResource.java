@@ -2,11 +2,12 @@ package com.mercado.api.resource;
 
 import com.mercado.application.dto.DashboardResumoOutput;
 import com.mercado.application.usecase.ObterDashboardResumoUseCase;
+import com.mercado.infrastructure.security.TenantSecurityContext;
+import io.quarkus.security.Authenticated;
 import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
@@ -16,41 +17,34 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Recurso REST para o Dashboard Gerencial e Métricas Comerciais.
+ * Recurso REST para o Dashboard Gerencial e Metricas Comerciais.
  * Mapeado sob /dashboard.
  * Executa sob Virtual Threads do Java 21 via @RunOnVirtualThread.
+ * Requer autenticacao JWT valida (@Authenticated).
+ * O tenant_id e extraido diretamente das claims do JWT via TenantSecurityContext.
  */
+@Authenticated
 @Path("/dashboard")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class DashboardResource {
 
-    public static final String HEADER_TENANT_ID = "X-Tenant-Id";
-
     private final ObterDashboardResumoUseCase obterDashboardResumoUseCase;
+    private final TenantSecurityContext securityContext;
 
     @Inject
-    public DashboardResource(ObterDashboardResumoUseCase obterDashboardResumoUseCase) {
-        this.obterDashboardResumoUseCase = Objects.requireNonNull(obterDashboardResumoUseCase, "ObterDashboardResumoUseCase é obrigatório.");
+    public DashboardResource(ObterDashboardResumoUseCase obterDashboardResumoUseCase,
+                             TenantSecurityContext securityContext) {
+        this.obterDashboardResumoUseCase = Objects.requireNonNull(obterDashboardResumoUseCase, "ObterDashboardResumoUseCase e obrigatorio.");
+        this.securityContext = Objects.requireNonNull(securityContext, "TenantSecurityContext e obrigatorio.");
     }
 
     @GET
     @Path("/resumo")
     @RunOnVirtualThread
-    public Response obterResumo(@HeaderParam(HEADER_TENANT_ID) String tenantIdHeader) {
-        UUID tenantId = extrairTenantId(tenantIdHeader);
+    public Response obterResumo() {
+        UUID tenantId = securityContext.getTenantId().valor();
         DashboardResumoOutput output = obterDashboardResumoUseCase.executar(tenantId);
         return Response.ok(output).build();
-    }
-
-    protected UUID extrairTenantId(String tenantIdHeader) {
-        if (tenantIdHeader == null || tenantIdHeader.isBlank()) {
-            throw new IllegalArgumentException("O cabeçalho obrigatório '" + HEADER_TENANT_ID + "' não foi informado.");
-        }
-        try {
-            return UUID.fromString(tenantIdHeader.trim());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Identificador de Tenant ('" + HEADER_TENANT_ID + "') com formato UUID inválido: " + tenantIdHeader);
-        }
     }
 }

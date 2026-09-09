@@ -193,6 +193,16 @@ class RegistrarVendaUseCaseTest {
         }
 
         @Override
+        public List<Cliente> listarTodos(TenantId tenantId, String busca, String status, Boolean apenasDevedores) {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public void excluir(UUID id, TenantId tenantId) {
+            store.remove(id);
+        }
+
+        @Override
         public void salvar(Cliente cliente) {
             store.put(cliente.getId(), cliente);
         }

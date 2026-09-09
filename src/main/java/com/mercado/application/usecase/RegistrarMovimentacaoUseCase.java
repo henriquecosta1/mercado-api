@@ -25,12 +25,20 @@ public class RegistrarMovimentacaoUseCase {
 
     private final CaixaRepository caixaRepository;
     private final MovimentacaoCaixaRepository movimentacaoCaixaRepository;
+    private final ValidarPinGerenteUseCase validarPinGerenteUseCase;
 
     @Inject
     public RegistrarMovimentacaoUseCase(CaixaRepository caixaRepository,
-                                       MovimentacaoCaixaRepository movimentacaoCaixaRepository) {
+                                       MovimentacaoCaixaRepository movimentacaoCaixaRepository,
+                                       ValidarPinGerenteUseCase validarPinGerenteUseCase) {
         this.caixaRepository = Objects.requireNonNull(caixaRepository, "CaixaRepository é obrigatório.");
         this.movimentacaoCaixaRepository = Objects.requireNonNull(movimentacaoCaixaRepository, "MovimentacaoCaixaRepository é obrigatório.");
+        this.validarPinGerenteUseCase = validarPinGerenteUseCase;
+    }
+
+    public RegistrarMovimentacaoUseCase(CaixaRepository caixaRepository,
+                                       MovimentacaoCaixaRepository movimentacaoCaixaRepository) {
+        this(caixaRepository, movimentacaoCaixaRepository, null);
     }
 
     @Transactional
@@ -58,6 +66,9 @@ public class RegistrarMovimentacaoUseCase {
             .orElseThrow(() -> new RegraDeNegocioException("Não existe caixa aberto para o tenant especificado."));
 
         if (tipo == TipoMovimentacao.SANGRIA) {
+            if (validarPinGerenteUseCase != null) {
+                validarPinGerenteUseCase.executar(new com.mercado.application.dto.ValidarPinInput(input.tenantId(), input.pin()));
+            }
             caixa.realizarSangria(valor, input.motivo().trim());
         } else if (tipo == TipoMovimentacao.SUPRIMENTO) {
             caixa.realizarSuprimento(valor, input.motivo().trim());

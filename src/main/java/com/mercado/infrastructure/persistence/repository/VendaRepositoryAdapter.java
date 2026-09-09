@@ -85,6 +85,24 @@ public class VendaRepositoryAdapter implements VendaRepository, DashboardReposit
     }
 
     @Override
+    public List<Venda> listarFiadoPorCliente(UUID clienteId, TenantId tenantId) {
+        List<VendaJpaEntity> vendasJpa = find(
+            "tenantId = ?1 and clienteId = ?2 and formaPagamento = 'FIADO' and status = 'CONCLUIDA' order by criadoEm desc",
+            tenantId.valor(), clienteId
+        ).list();
+
+        return vendasJpa.stream()
+            .map(vendaJpa -> {
+                List<ItemVendaJpaEntity> itensJpa = ItemVendaJpaEntity.find("vendaId = ?1", vendaJpa.id).list();
+                List<ItemVenda> itens = itensJpa.stream()
+                    .map(ItemVendaJpaEntity::toDomain)
+                    .toList();
+                return vendaJpa.toDomain(itens);
+            })
+            .toList();
+    }
+
+    @Override
     public MetricasFaturamentoDTO calcularMetricasFaturamento(TenantId tenantId, Instant de, Instant ate) {
         String jpql = """
             select coalesce(sum(v.valorTotal), 0), count(v.id)

@@ -63,4 +63,21 @@ class ClienteTest {
 
         assertThrows(RegraDeNegocioException.class, () -> cliente.amortizarDebito(Dinheiro.de("40.00")));
     }
+
+    @Test
+    @DisplayName("Deve permitir exclusão quando cliente possui saldo devedor zerado")
+    void devePermitirExclusaoQuandoSaldoZerado() {
+        Cliente cliente = Cliente.criar(tenantId, "Pedro Silva", "11911112222", Dinheiro.de("500.00"));
+
+        assertTrue(cliente.podeSerExcluido());
+    }
+
+    @Test
+    @DisplayName("Não deve permitir exclusão quando cliente possui saldo devedor positivo")
+    void naoDevePermitirExclusaoQuandoSaldoPositivo() {
+        Cliente cliente = Cliente.criar(tenantId, "Pedro Silva", "11911112222", Dinheiro.de("500.00"));
+        cliente.registrarDebito(Dinheiro.de("50.00"));
+
+        assertFalse(cliente.podeSerExcluido());
+    }
 }

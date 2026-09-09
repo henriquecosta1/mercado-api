@@ -22,6 +22,10 @@ public interface ClienteRepository {
 
     List<Cliente> buscarPorNome(String nome, TenantId tenantId);
 
+    List<Cliente> listarTodos(TenantId tenantId, String busca, String status, Boolean apenasDevedores);
+
+    void excluir(UUID id, TenantId tenantId);
+
     default BigDecimal somarTotalSaldoDevedor(TenantId tenantId) {
         return listarComSaldoDevedor(tenantId).stream()
             .map(c -> c.getSaldoDevedor().valor())

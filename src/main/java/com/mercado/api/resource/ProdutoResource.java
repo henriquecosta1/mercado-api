@@ -13,11 +13,12 @@ import com.mercado.domain.entity.Produto;
 import com.mercado.domain.exception.RecursoNaoEncontradoException;
 import com.mercado.domain.repository.ProdutoRepository;
 import com.mercado.domain.valueobject.TenantId;
+import com.mercado.infrastructure.security.TenantSecurityContext;
+import io.quarkus.security.Authenticated;
 import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
@@ -33,42 +34,45 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Recurso REST para Catálogo e Gestão de Estoque de Produtos.
- * Mapeado sob /api/produtos, com execução em Virtual Threads do Java 21.
+ * Recurso REST para Catalogo e Gestao de Estoque de Produtos.
+ * Mapeado sob /api/produtos, com execucao em Virtual Threads do Java 21.
+ * Requer autenticacao JWT valida (@Authenticated).
+ * O tenant_id e extraido diretamente das claims do JWT via TenantSecurityContext.
  */
+@Authenticated
 @Path("/api/produtos")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class ProdutoResource {
-
-    public static final String HEADER_TENANT_ID = "X-Tenant-Id";
 
     private final ListarProdutosGerencialUseCase listarProdutosGerencialUseCase;
     private final SalvarProdutoUseCase salvarProdutoUseCase;
     private final AjustarEstoqueUseCase ajustarEstoqueUseCase;
     private final AlternarStatusProdutoUseCase alternarStatusProdutoUseCase;
     private final ProdutoRepository produtoRepository;
+    private final TenantSecurityContext securityContext;
 
     @Inject
     public ProdutoResource(ListarProdutosGerencialUseCase listarProdutosGerencialUseCase,
                            SalvarProdutoUseCase salvarProdutoUseCase,
                            AjustarEstoqueUseCase ajustarEstoqueUseCase,
                            AlternarStatusProdutoUseCase alternarStatusProdutoUseCase,
-                           ProdutoRepository produtoRepository) {
-        this.listarProdutosGerencialUseCase = Objects.requireNonNull(listarProdutosGerencialUseCase, "ListarProdutosGerencialUseCase é obrigatório.");
-        this.salvarProdutoUseCase = Objects.requireNonNull(salvarProdutoUseCase, "SalvarProdutoUseCase é obrigatório.");
-        this.ajustarEstoqueUseCase = Objects.requireNonNull(ajustarEstoqueUseCase, "AjustarEstoqueUseCase é obrigatório.");
-        this.alternarStatusProdutoUseCase = Objects.requireNonNull(alternarStatusProdutoUseCase, "AlternarStatusProdutoUseCase é obrigatório.");
-        this.produtoRepository = Objects.requireNonNull(produtoRepository, "ProdutoRepository é obrigatório.");
+                           ProdutoRepository produtoRepository,
+                           TenantSecurityContext securityContext) {
+        this.listarProdutosGerencialUseCase = Objects.requireNonNull(listarProdutosGerencialUseCase, "ListarProdutosGerencialUseCase e obrigatorio.");
+        this.salvarProdutoUseCase = Objects.requireNonNull(salvarProdutoUseCase, "SalvarProdutoUseCase e obrigatorio.");
+        this.ajustarEstoqueUseCase = Objects.requireNonNull(ajustarEstoqueUseCase, "AjustarEstoqueUseCase e obrigatorio.");
+        this.alternarStatusProdutoUseCase = Objects.requireNonNull(alternarStatusProdutoUseCase, "AlternarStatusProdutoUseCase e obrigatorio.");
+        this.produtoRepository = Objects.requireNonNull(produtoRepository, "ProdutoRepository e obrigatorio.");
+        this.securityContext = Objects.requireNonNull(securityContext, "TenantSecurityContext e obrigatorio.");
     }
 
     @GET
     @RunOnVirtualThread
-    public Response listarProdutos(@HeaderParam(HEADER_TENANT_ID) String tenantIdHeader,
-                                   @QueryParam("busca") String busca,
+    public Response listarProdutos(@QueryParam("busca") String busca,
                                    @QueryParam("categoria") String categoria,
                                    @QueryParam("estoqueBaixo") Boolean estoqueBaixo) {
-        UUID tenantId = extrairTenantId(tenantIdHeader);
+        UUID tenantId = securityContext.getTenantId().valor();
         List<ProdutoGerencialDTO> produtos = listarProdutosGerencialUseCase.executar(tenantId, busca, categoria, estoqueBaixo);
         return Response.ok(produtos).build();
     }
@@ -76,22 +80,20 @@ public class ProdutoResource {
     @GET
     @Path("/{id}")
     @RunOnVirtualThread
-    public Response buscarPorId(@HeaderParam(HEADER_TENANT_ID) String tenantIdHeader,
-                                @PathParam("id") UUID id) {
-        UUID tenantId = extrairTenantId(tenantIdHeader);
+    public Response buscarPorId(@PathParam("id") UUID id) {
+        UUID tenantId = securityContext.getTenantId().valor();
         Produto produto = produtoRepository.buscarPorId(id, TenantId.de(tenantId))
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Produto não encontrado com id: " + id));
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Produto nao encontrado com id: " + id));
 
         return Response.ok(ProdutoGerencialDTO.from(produto)).build();
     }
 
     @POST
     @RunOnVirtualThread
-    public Response cadastrarProduto(@HeaderParam(HEADER_TENANT_ID) String tenantIdHeader,
-                                     SalvarProdutoRequest request) {
-        UUID tenantId = extrairTenantId(tenantIdHeader);
+    public Response cadastrarProduto(SalvarProdutoRequest request) {
+        UUID tenantId = securityContext.getTenantId().valor();
         if (request == null) {
-            throw new IllegalArgumentException("Corpo da requisição não pode ser vazio.");
+            throw new IllegalArgumentException("Corpo da requisicao nao pode ser vazio.");
         }
 
         SalvarProdutoInput input = new SalvarProdutoInput(
@@ -116,12 +118,11 @@ public class ProdutoResource {
     @PUT
     @Path("/{id}")
     @RunOnVirtualThread
-    public Response atualizarProduto(@HeaderParam(HEADER_TENANT_ID) String tenantIdHeader,
-                                     @PathParam("id") UUID id,
+    public Response atualizarProduto(@PathParam("id") UUID id,
                                      SalvarProdutoRequest request) {
-        UUID tenantId = extrairTenantId(tenantIdHeader);
+        UUID tenantId = securityContext.getTenantId().valor();
         if (request == null) {
-            throw new IllegalArgumentException("Corpo da requisição não pode ser vazio.");
+            throw new IllegalArgumentException("Corpo da requisicao nao pode ser vazio.");
         }
 
         SalvarProdutoInput input = new SalvarProdutoInput(
@@ -137,19 +138,17 @@ public class ProdutoResource {
         );
 
         ProdutoGerencialDTO produtoAtualizado = salvarProdutoUseCase.executar(input);
-
         return Response.ok(produtoAtualizado).build();
     }
 
     @PATCH
     @Path("/{id}/estoque")
     @RunOnVirtualThread
-    public Response ajustarEstoque(@HeaderParam(HEADER_TENANT_ID) String tenantIdHeader,
-                                   @PathParam("id") UUID id,
+    public Response ajustarEstoque(@PathParam("id") UUID id,
                                    AjustarEstoqueRequest request) {
-        UUID tenantId = extrairTenantId(tenantIdHeader);
+        UUID tenantId = securityContext.getTenantId().valor();
         if (request == null) {
-            throw new IllegalArgumentException("Corpo da requisição não pode ser vazio.");
+            throw new IllegalArgumentException("Corpo da requisicao nao pode ser vazio.");
         }
 
         AjustarEstoqueInput input = new AjustarEstoqueInput(
@@ -160,28 +159,15 @@ public class ProdutoResource {
         );
 
         ProdutoGerencialDTO produtoAtualizado = ajustarEstoqueUseCase.executar(input);
-
         return Response.ok(produtoAtualizado).build();
     }
 
     @PATCH
     @Path("/{id}/status")
     @RunOnVirtualThread
-    public Response alternarStatus(@HeaderParam(HEADER_TENANT_ID) String tenantIdHeader,
-                                   @PathParam("id") UUID id) {
-        UUID tenantId = extrairTenantId(tenantIdHeader);
+    public Response alternarStatus(@PathParam("id") UUID id) {
+        UUID tenantId = securityContext.getTenantId().valor();
         ProdutoGerencialDTO produtoAtualizado = alternarStatusProdutoUseCase.executar(tenantId, id);
         return Response.ok(produtoAtualizado).build();
-    }
-
-    private UUID extrairTenantId(String tenantIdHeader) {
-        if (tenantIdHeader == null || tenantIdHeader.isBlank()) {
-            throw new IllegalArgumentException("O cabeçalho obrigatório '" + HEADER_TENANT_ID + "' não foi informado.");
-        }
-        try {
-            return UUID.fromString(tenantIdHeader.trim());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Identificador de Tenant ('" + HEADER_TENANT_ID + "') com formato UUID inválido: " + tenantIdHeader);
-        }
     }
 }

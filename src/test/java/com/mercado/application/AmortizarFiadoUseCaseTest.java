@@ -239,6 +239,37 @@ class AmortizarFiadoUseCaseTest {
         }
 
         @Override
+        public List<Cliente> listarTodos(TenantId tenantId, String busca, String status, Boolean apenasDevedores) {
+            return store.values().stream()
+                .filter(c -> c.getTenantId().equals(tenantId))
+                .filter(c -> {
+                    if (busca == null || busca.isBlank()) return true;
+                    String b = busca.toLowerCase().trim();
+                    return (c.getNome() != null && c.getNome().toLowerCase().contains(b))
+                        || (c.getApelido() != null && c.getApelido().toLowerCase().contains(b))
+                        || (c.getTelefone() != null && c.getTelefone().contains(b))
+                        || (c.getCpf() != null && c.getCpf().contains(b));
+                })
+                .filter(c -> {
+                    if (status == null || status.isBlank() || status.equalsIgnoreCase("TODOS")) return true;
+                    return c.getStatus().name().equalsIgnoreCase(status.trim());
+                })
+                .filter(c -> {
+                    if (Boolean.TRUE.equals(apenasDevedores)) {
+                        return c.getSaldoDevedor().isMaiorQue(Dinheiro.zero());
+                    }
+                    return true;
+                })
+                .sorted(Comparator.comparing(Cliente::getNome, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        }
+
+        @Override
+        public void excluir(UUID id, TenantId tenantId) {
+            store.remove(id);
+        }
+
+        @Override
         public void salvar(Cliente cliente) {
             store.put(cliente.getId(), cliente);
         }

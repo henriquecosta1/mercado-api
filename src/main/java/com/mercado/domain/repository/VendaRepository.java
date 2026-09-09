@@ -33,4 +33,8 @@ public interface VendaRepository {
     default List<Venda> listarPorCaixa(TenantId tenantId, UUID caixaId) {
         return Collections.emptyList();
     }
+
+    default List<Venda> listarFiadoPorCliente(UUID clienteId, TenantId tenantId) {
+        return Collections.emptyList();
+    }
 }

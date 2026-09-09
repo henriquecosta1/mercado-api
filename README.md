@@ -59,6 +59,16 @@ O **Mercado API** foi desenvolvido para atender com excelência às operações 
 * Distribuição percentual e absoluta das vendas do dia por forma de pagamento.
 * Ranking dos **Top 5 produtos mais vendidos** do mês por faturamento e volume.
 
+### 7. Extrato Detalhado e Linha do Tempo do Fiado
+* Extrato cronológico unificado por cliente integrando compras a prazo (`COMPRA_FIADO`) e pagamentos parciais (`AMORTIZACAO`).
+* Apresentação da data/hora, forma de pagamento, lista de itens comprados e recálculo progressivo do saldo devedor.
+
+### 8. Controle de Permissões por PIN de Gerente
+* Camada de autorização para operações sensíveis de caixa e PDV.
+* Exigência de cabeçalho `X-Gerente-Pin` em cancelamento de vendas e retiradas por sangria.
+* Armazenamento seguro de senhas com algoritmo de hashing **BCrypt**.
+* Endpoints dedicados para conferência e alteração de PIN administrativo por tenant.
+
 ---
 
 ## 🏛️ Arquitetura e Padrões de Projeto
@@ -211,6 +221,8 @@ O Quarkus possui suporte a **Live Reload** instantâneo:
 | **`V3__criar_produtos_e_itens_venda.sql`** | Catálogo `produtos` e relação de `itens_venda`. |
 | **`V4__adicionar_cancelamento_venda.sql`** | Campos de status, motivo, data de cancelamento e vínculo de cliente em `vendas`. |
 | **`V5__evoluir_tabela_produtos.sql`** | Colunas `categoria`, `preco_custo` e `estoque_minimo` com índices de consulta. |
+| **`V6__criar_tabela_amortizacoes.sql`** | Tabela `amortizacoes` para pagamentos parciais de clientes com vínculo de caixa. |
+| **`V7__adicionar_pin_gerente_tenant.sql`** | Coluna `pin_gerente` em `tenants` com hash BCrypt padrão para PIN '1234'. |
 
 ---
 
@@ -327,9 +339,9 @@ O Quarkus possui suporte a **Live Reload** instantâneo:
 
 | Método | Rota | Descrição |
 | :--- | :--- | :--- |
-| `GET` | `/api/caixas/resumo` | Resumo financeiro consolidado do caixa aberto |
+| `GET` | `/api/caixas/atual` | Resumo financeiro consolidado do caixa aberto |
 | `POST` | `/api/caixas/abrir` | Abertura de caixa (`saldoInicial`) |
-| `POST` | `/api/caixas/movimentacoes` | Registro de Sangria ou Suprimento |
+| `POST` | `/api/caixas/movimentacoes` | Registro de Sangria ou Suprimento (*Sangria requer `X-Gerente-Pin`*) |
 | `POST` | `/api/caixas/fechar` | Fechamento do caixa com conferência de saldo |
 
 ---
@@ -339,6 +351,7 @@ O Quarkus possui suporte a **Live Reload** instantâneo:
 | Método | Rota | Descrição |
 | :--- | :--- | :--- |
 | `GET` | `/api/clientes` | Lista clientes com saldo devedor (`?busca=...`) |
+| `GET` | `/api/clientes/{id}/extrato` | Extrato cronológico detalhado do fiado (compras e pagamentos) |
 | `POST` | `/api/clientes/{id}/amortizacoes` | Amortiza débito fiado (`valorPago`, `formaPagamento`) |
 
 ---
@@ -397,6 +410,21 @@ O Quarkus possui suporte a **Live Reload** instantâneo:
 
 ---
 
+### 🔑 6. Segurança e Permissões por PIN
+
+Endpoints para validação e configuração do PIN de Gerente (compatíveis com prefixos `/seguranca` e `/api/seguranca`):
+
+| Método | Rota | Descrição |
+| :--- | :--- | :--- |
+| `POST` | `/api/seguranca/validar-pin` | Valida credencial numérica do gerente (`pin`) |
+| `PUT` | `/api/seguranca/alterar-pin` | Altera o PIN do tenant (`pinAtual`, `novoPin` de 4 a 6 dígitos) |
+
+> ⚠️ **Operações Protegidas por PIN:**
+> * `POST /api/vendas/{id}/cancelar`: exige cabeçalho `X-Gerente-Pin`
+> * `POST /api/caixas/movimentacoes` (apenas tipo `SANGRIA`): exige cabeçalho `X-Gerente-Pin`
+
+---
+
 ## 🔒 Tratamento Padronizado de Erros
 
 Erros do domínio e validações retornam payloads padronizados via [`DomainExceptionHandler`](file:///C:/Projetos%20pessoais/mercado/mercado-api/src/main/java/com/mercado/api/handler/DomainExceptionHandler.java):
@@ -413,6 +441,7 @@ Erros do domínio e validações retornam payloads padronizados via [`DomainExce
 | Código HTTP | Significado |
 | :--- | :--- |
 | **`400 Bad Request`** | Parâmetro inválido, UUID mal formatado ou cabeçalho `X-Tenant-Id` ausente |
+| **`403 Forbidden`** | PIN de gerente incorreto ou ausente para operação sensível |
 | **`404 Not Found`** | Recurso (produto, cliente, caixa ou venda) não encontrado |
 | **`422 Unprocessable Entity`** | Regra de negócio violada (saldo insuficiente, valores negativos, etc.) |
 | **`500 Internal Server Error`** | Falha técnica inesperada |

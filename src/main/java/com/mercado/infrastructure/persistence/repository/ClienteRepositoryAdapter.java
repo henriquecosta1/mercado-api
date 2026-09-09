@@ -1,10 +1,12 @@
 package com.mercado.infrastructure.persistence.repository;
 
 import com.mercado.domain.entity.Cliente;
+import com.mercado.domain.entity.StatusCliente;
 import com.mercado.domain.repository.ClienteRepository;
 import com.mercado.domain.valueobject.TenantId;
 import com.mercado.infrastructure.persistence.entity.ClienteJpaEntity;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
+import io.quarkus.panache.common.Parameters;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.math.BigDecimal;
@@ -50,14 +52,51 @@ public class ClienteRepositoryAdapter implements ClienteRepository, PanacheRepos
     @Override
     public List<Cliente> buscarPorNome(String nome, TenantId tenantId) {
         if (nome == null || nome.isBlank()) {
-            return listarComSaldoDevedor(tenantId);
+            return find("tenantId = ?1 order by nome asc", tenantId.valor())
+                .list()
+                .stream()
+                .map(ClienteJpaEntity::toDomain)
+                .toList();
         }
-        return find("tenantId = ?1 and lower(nome) like lower(?2) order by nome asc",
+        return find("tenantId = ?1 and (lower(nome) like lower(?2) or (apelido is not null and lower(apelido) like lower(?2)) or (telefone is not null and telefone like ?2)) order by nome asc",
                     tenantId.valor(), "%" + nome.trim() + "%")
             .list()
             .stream()
             .map(ClienteJpaEntity::toDomain)
             .toList();
+    }
+
+    @Override
+    public List<Cliente> listarTodos(TenantId tenantId, String busca, String status, Boolean apenasDevedores) {
+        StringBuilder query = new StringBuilder("tenantId = :tenantId");
+        Parameters params = Parameters.with("tenantId", tenantId.valor());
+
+        if (busca != null && !busca.isBlank()) {
+            query.append(" and (lower(nome) like :busca or (apelido is not null and lower(apelido) like :busca) or (telefone is not null and telefone like :busca) or (cpf is not null and cpf like :busca))");
+            params.and("busca", "%" + busca.trim().toLowerCase() + "%");
+        }
+
+        if (status != null && !status.isBlank() && !status.equalsIgnoreCase("TODOS")) {
+            query.append(" and status = :status");
+            params.and("status", StatusCliente.de(status));
+        }
+
+        if (Boolean.TRUE.equals(apenasDevedores)) {
+            query.append(" and saldoDevedor > 0");
+        }
+
+        query.append(" order by nome asc");
+
+        return find(query.toString(), params)
+            .list()
+            .stream()
+            .map(ClienteJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    public void excluir(UUID id, TenantId tenantId) {
+        delete("tenantId = ?1 and id = ?2", tenantId.valor(), id);
     }
 
     @Override

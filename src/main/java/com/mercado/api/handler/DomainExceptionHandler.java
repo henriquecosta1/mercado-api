@@ -19,6 +19,30 @@ public class DomainExceptionHandler implements ExceptionMapper<Exception> {
                 .build();
         }
 
+        if (exception instanceof com.mercado.domain.exception.PinInvalidoException e) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(ErrorResponse.of("Acesso Negado", e.getMessage(), Response.Status.FORBIDDEN.getStatusCode()))
+                .build();
+        }
+
+        if (exception instanceof com.mercado.domain.exception.ClienteBloqueadoException e) {
+            return Response.status(422)
+                .entity(ErrorResponse.of("Cliente Bloqueado", e.getMessage(), 422))
+                .build();
+        }
+
+        if (exception instanceof com.mercado.domain.exception.LimiteCreditoExcedidoException e) {
+            return Response.status(422)
+                .entity(ErrorResponse.of("Limite de Crédito Excedido", e.getMessage(), 422))
+                .build();
+        }
+
+        if (exception instanceof com.mercado.domain.exception.ClienteComDebitoException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(ErrorResponse.of("Cliente com Débito Pendente", e.getMessage(), Response.Status.BAD_REQUEST.getStatusCode()))
+                .build();
+        }
+
         if (exception instanceof RegraDeNegocioException e) {
             return Response.status(422)
                 .entity(ErrorResponse.of("Regra de Negócio Violada", e.getMessage(), 422))

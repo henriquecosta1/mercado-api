@@ -36,22 +36,32 @@ public class CancelarVendaUseCase {
     private final CaixaRepository caixaRepository;
     private final ClienteRepository clienteRepository;
     private final ProdutoRepository produtoRepository;
+    private final ValidarPinGerenteUseCase validarPinGerenteUseCase;
 
     @Inject
     public CancelarVendaUseCase(VendaRepository vendaRepository,
                                 CaixaRepository caixaRepository,
                                 ClienteRepository clienteRepository,
-                                ProdutoRepository produtoRepository) {
+                                ProdutoRepository produtoRepository,
+                                ValidarPinGerenteUseCase validarPinGerenteUseCase) {
         this.vendaRepository = Objects.requireNonNull(vendaRepository, "VendaRepository é obrigatório.");
         this.caixaRepository = Objects.requireNonNull(caixaRepository, "CaixaRepository é obrigatório.");
         this.clienteRepository = Objects.requireNonNull(clienteRepository, "ClienteRepository é obrigatório.");
         this.produtoRepository = produtoRepository;
+        this.validarPinGerenteUseCase = validarPinGerenteUseCase;
+    }
+
+    public CancelarVendaUseCase(VendaRepository vendaRepository,
+                                CaixaRepository caixaRepository,
+                                ClienteRepository clienteRepository,
+                                ProdutoRepository produtoRepository) {
+        this(vendaRepository, caixaRepository, clienteRepository, produtoRepository, null);
     }
 
     public CancelarVendaUseCase(VendaRepository vendaRepository,
                                 CaixaRepository caixaRepository,
                                 ClienteRepository clienteRepository) {
-        this(vendaRepository, caixaRepository, clienteRepository, null);
+        this(vendaRepository, caixaRepository, clienteRepository, null, null);
     }
 
     @Transactional
@@ -65,6 +75,11 @@ public class CancelarVendaUseCase {
         }
         if (input.motivo() == null || input.motivo().isBlank()) {
             throw new RegraDeNegocioException("Motivo do cancelamento é obrigatório.");
+        }
+
+        // Validação de PIN de Gerente se o validador estiver presente
+        if (validarPinGerenteUseCase != null) {
+            validarPinGerenteUseCase.executar(new com.mercado.application.dto.ValidarPinInput(input.tenantId(), input.pin()));
         }
 
         TenantId tenantId = TenantId.de(input.tenantId());

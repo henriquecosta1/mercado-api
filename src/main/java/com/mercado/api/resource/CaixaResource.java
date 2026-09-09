@@ -10,6 +10,8 @@ import com.mercado.application.usecase.AbrirCaixaUseCase;
 import com.mercado.application.usecase.FecharCaixaUseCase;
 import com.mercado.application.usecase.ObterResumoCaixaUseCase;
 import com.mercado.application.usecase.RegistrarMovimentacaoUseCase;
+import com.mercado.infrastructure.security.TenantSecurityContext;
+import io.quarkus.security.Authenticated;
 import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -26,37 +28,45 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Recurso REST para gestão do Caixa (Resumo, Abertura, Fechamento e Movimentações).
+ * Recurso REST para gestao do Caixa (Resumo, Abertura, Fechamento e Movimentacoes).
  * Mapeado sob /api/caixas e executando com Virtual Threads do Java 21.
+ * Requer autenticacao JWT valida (@Authenticated).
+ * O tenant_id e extraido diretamente das claims do JWT via TenantSecurityContext.
  */
+@Authenticated
 @Path("/api/caixas")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class CaixaResource {
 
-    public static final String HEADER_TENANT_ID = "X-Tenant-Id";
+    /** @deprecated Mantido por compatibilidade de integracao; use JWT claims. */
+    @Deprecated
+    public static final String HEADER_GERENTE_PIN = "X-Gerente-Pin";
 
     private final ObterResumoCaixaUseCase obterResumoCaixaUseCase;
     private final AbrirCaixaUseCase abrirCaixaUseCase;
     private final RegistrarMovimentacaoUseCase registrarMovimentacaoUseCase;
     private final FecharCaixaUseCase fecharCaixaUseCase;
+    private final TenantSecurityContext securityContext;
 
     @Inject
     public CaixaResource(ObterResumoCaixaUseCase obterResumoCaixaUseCase,
                          AbrirCaixaUseCase abrirCaixaUseCase,
                          RegistrarMovimentacaoUseCase registrarMovimentacaoUseCase,
-                         FecharCaixaUseCase fecharCaixaUseCase) {
-        this.obterResumoCaixaUseCase = Objects.requireNonNull(obterResumoCaixaUseCase, "ObterResumoCaixaUseCase é obrigatório.");
-        this.abrirCaixaUseCase = Objects.requireNonNull(abrirCaixaUseCase, "AbrirCaixaUseCase é obrigatório.");
-        this.registrarMovimentacaoUseCase = Objects.requireNonNull(registrarMovimentacaoUseCase, "RegistrarMovimentacaoUseCase é obrigatório.");
-        this.fecharCaixaUseCase = Objects.requireNonNull(fecharCaixaUseCase, "FecharCaixaUseCase é obrigatório.");
+                         FecharCaixaUseCase fecharCaixaUseCase,
+                         TenantSecurityContext securityContext) {
+        this.obterResumoCaixaUseCase = Objects.requireNonNull(obterResumoCaixaUseCase, "ObterResumoCaixaUseCase e obrigatorio.");
+        this.abrirCaixaUseCase = Objects.requireNonNull(abrirCaixaUseCase, "AbrirCaixaUseCase e obrigatorio.");
+        this.registrarMovimentacaoUseCase = Objects.requireNonNull(registrarMovimentacaoUseCase, "RegistrarMovimentacaoUseCase e obrigatorio.");
+        this.fecharCaixaUseCase = Objects.requireNonNull(fecharCaixaUseCase, "FecharCaixaUseCase e obrigatorio.");
+        this.securityContext = Objects.requireNonNull(securityContext, "TenantSecurityContext e obrigatorio.");
     }
 
     @GET
     @Path("/atual")
     @RunOnVirtualThread
-    public Response obterResumoAtual(@HeaderParam(HEADER_TENANT_ID) String tenantIdHeader) {
-        UUID tenantId = extrairTenantId(tenantIdHeader);
+    public Response obterResumoAtual() {
+        UUID tenantId = securityContext.getTenantId().valor();
         ResumoCaixaOutput resumo = obterResumoCaixaUseCase.executar(tenantId);
         return Response.ok(resumo).build();
     }
@@ -64,11 +74,10 @@ public class CaixaResource {
     @POST
     @Path("/abrir")
     @RunOnVirtualThread
-    public Response abrirCaixa(@HeaderParam(HEADER_TENANT_ID) String tenantIdHeader,
-                               AberturaCaixaRequest request) {
-        UUID tenantId = extrairTenantId(tenantIdHeader);
+    public Response abrirCaixa(AberturaCaixaRequest request) {
+        UUID tenantId = securityContext.getTenantId().valor();
         if (request == null || request.saldoInicial() == null) {
-            throw new IllegalArgumentException("Saldo inicial é obrigatório para abertura de caixa.");
+            throw new IllegalArgumentException("Saldo inicial e obrigatorio para abertura de caixa.");
         }
 
         UUID caixaId = abrirCaixaUseCase.executar(new AbrirCaixaInput(tenantId, request.saldoInicial()));
@@ -80,43 +89,33 @@ public class CaixaResource {
     @POST
     @Path("/movimentacoes")
     @RunOnVirtualThread
-    public Response registrarMovimentacao(@HeaderParam(HEADER_TENANT_ID) String tenantIdHeader,
+    public Response registrarMovimentacao(@HeaderParam(HEADER_GERENTE_PIN) String gerentePin,
                                          MovimentacaoRequest request) {
-        UUID tenantId = extrairTenantId(tenantIdHeader);
+        UUID tenantId = securityContext.getTenantId().valor();
         if (request == null) {
-            throw new IllegalArgumentException("Corpo da requisição não pode ser vazio.");
+            throw new IllegalArgumentException("Corpo da requisicao nao pode ser vazio.");
         }
 
         MovimentacaoInput input = new MovimentacaoInput(
             tenantId,
             request.tipo(),
             request.valor(),
-            request.motivo()
+            request.motivo(),
+            gerentePin
         );
 
         UUID movimentacaoId = registrarMovimentacaoUseCase.executar(input);
         return Response.status(Response.Status.CREATED)
-            .entity(Map.of("movimentacaoId", movimentacaoId, "mensagem", "Movimentação registrada com sucesso."))
+            .entity(Map.of("movimentacaoId", movimentacaoId, "mensagem", "Movimentacao registrada com sucesso."))
             .build();
     }
 
     @POST
     @Path("/fechar")
     @RunOnVirtualThread
-    public Response fecharCaixa(@HeaderParam(HEADER_TENANT_ID) String tenantIdHeader) {
-        UUID tenantId = extrairTenantId(tenantIdHeader);
+    public Response fecharCaixa() {
+        UUID tenantId = securityContext.getTenantId().valor();
         FecharCaixaOutput output = fecharCaixaUseCase.executar(tenantId);
         return Response.ok(output).build();
-    }
-
-    private UUID extrairTenantId(String tenantIdHeader) {
-        if (tenantIdHeader == null || tenantIdHeader.isBlank()) {
-            throw new IllegalArgumentException("O cabeçalho obrigatório '" + HEADER_TENANT_ID + "' não foi informado.");
-        }
-        try {
-            return UUID.fromString(tenantIdHeader.trim());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Identificador de Tenant ('" + HEADER_TENANT_ID + "') com formato UUID inválido: " + tenantIdHeader);
-        }
     }
 }

@@ -2,11 +2,13 @@ package com.mercado.application.usecase;
 
 import com.mercado.application.dto.AmortizarFiadoInput;
 import com.mercado.application.dto.AmortizarFiadoOutput;
+import com.mercado.domain.entity.Amortizacao;
 import com.mercado.domain.entity.Caixa;
 import com.mercado.domain.entity.Cliente;
 import com.mercado.domain.entity.FormaPagamento;
 import com.mercado.domain.exception.RecursoNaoEncontradoException;
 import com.mercado.domain.exception.RegraDeNegocioException;
+import com.mercado.domain.repository.AmortizacaoRepository;
 import com.mercado.domain.repository.CaixaRepository;
 import com.mercado.domain.repository.ClienteRepository;
 import com.mercado.domain.valueobject.Dinheiro;
@@ -22,18 +24,27 @@ import java.util.Objects;
  * Caso de Uso: Amortizar Fiado.
  * Permite abater parte ou a totalidade da dívida de um cliente.
  * Se o pagamento for em DINHEIRO, dá entrada na gaveta do caixa atualmente aberto.
+ * Registra o histórico da amortização na tabela de amortizações.
  */
 @ApplicationScoped
 public class AmortizarFiadoUseCase {
 
     private final ClienteRepository clienteRepository;
     private final CaixaRepository caixaRepository;
+    private final AmortizacaoRepository amortizacaoRepository;
 
     @Inject
     public AmortizarFiadoUseCase(ClienteRepository clienteRepository,
-                                 CaixaRepository caixaRepository) {
+                                 CaixaRepository caixaRepository,
+                                 AmortizacaoRepository amortizacaoRepository) {
         this.clienteRepository = Objects.requireNonNull(clienteRepository, "ClienteRepository é obrigatório.");
         this.caixaRepository = Objects.requireNonNull(caixaRepository, "CaixaRepository é obrigatório.");
+        this.amortizacaoRepository = amortizacaoRepository;
+    }
+
+    public AmortizarFiadoUseCase(ClienteRepository clienteRepository,
+                                 CaixaRepository caixaRepository) {
+        this(clienteRepository, caixaRepository, null);
     }
 
     @Transactional
@@ -76,6 +87,18 @@ public class AmortizarFiadoUseCase {
 
         // 5. Atualiza o cliente persistido
         clienteRepository.atualizar(cliente);
+
+        // 6. Registra a amortização para o extrato
+        if (amortizacaoRepository != null) {
+            Amortizacao amortizacao = Amortizacao.criar(
+                tenantId,
+                cliente.getId(),
+                caixa.getId(),
+                valorPago,
+                formaPagamento.name()
+            );
+            amortizacaoRepository.salvar(amortizacao);
+        }
 
         return new AmortizarFiadoOutput(
             cliente.getId(),

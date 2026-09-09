@@ -156,6 +156,7 @@ public class RegistrarVendaUseCase {
                         return novoCliente;
                     });
 
+                cliente.validarVendaFiado(valorTotal);
                 cliente.registrarDebito(valorTotal);
                 clienteRepository.atualizar(cliente);
                 saldoDevedorCliente = cliente.getSaldoDevedor().valor();
