@@ -10,9 +10,12 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -42,9 +45,11 @@ public class DashboardResource {
     @GET
     @Path("/resumo")
     @RunOnVirtualThread
-    public Response obterResumo() {
+    public Response obterResumo(@QueryParam("periodo") String periodo,
+                                @QueryParam("inicio") LocalDate inicio,
+                                @QueryParam("fim") LocalDate fim) {
         UUID tenantId = securityContext.getTenantId().valor();
-        DashboardResumoOutput output = obterDashboardResumoUseCase.executar(tenantId);
+        DashboardResumoOutput output = obterDashboardResumoUseCase.executar(tenantId, periodo, inicio, fim, ZoneId.systemDefault());
         return Response.ok(output).build();
     }
 }

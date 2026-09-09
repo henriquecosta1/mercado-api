@@ -115,6 +115,30 @@ class ObterDashboardResumoUseCaseTest {
     }
 
     @Test
+    @DisplayName("Deve calcular resumo do dashboard para intervalo customizado de datas")
+    void deveCalcularDashboardResumoComIntervaloCustomizado() {
+        dashboardRepository.metricasHoje = new MetricasFaturamentoDTO(new BigDecimal("150.00"), 2, new BigDecimal("75.00"));
+        dashboardRepository.metricasMes = new MetricasFaturamentoDTO(new BigDecimal("5000.00"), 50, new BigDecimal("100.00"));
+        dashboardRepository.distribuicaoHoje = List.of(new TotalPorFormaPagamentoDTO("CARTAO", new BigDecimal("5000.00"), 50, 100.0));
+        dashboardRepository.topProdutos = List.of(new TopProdutoVendidoDTO("Produto Top", new BigDecimal("100.000"), new BigDecimal("1000.00")));
+
+        java.time.LocalDate inicio = java.time.LocalDate.of(2026, 8, 1);
+        java.time.LocalDate fim = java.time.LocalDate.of(2026, 8, 31);
+        ZoneId zoneId = ZoneId.of("America/Sao_Paulo");
+
+        DashboardResumoOutput output = useCase.executar(tenantIdRaw, inicio, fim, zoneId);
+
+        assertNotNull(output);
+        assertEquals(new BigDecimal("150.00"), output.hoje().faturamentoTotal());
+        assertEquals(new BigDecimal("5000.00"), output.metricasPeriodo().faturamentoTotal());
+        assertEquals(50, output.metricasPeriodo().totalVendas());
+        assertEquals(1, output.distribuicaoPagamentos().size());
+        assertEquals("CARTAO", output.distribuicaoPagamentos().get(0).formaPagamento());
+        assertEquals(1, output.topProdutos().size());
+        assertEquals("Produto Top", output.topProdutos().get(0).nomeProduto());
+    }
+
+    @Test
     @DisplayName("Deve lançar exceção quando tenantId não for informado")
     void deveFalharQuandoTenantIdNaoInformado() {
         assertThrows(IllegalArgumentException.class, () -> useCase.executar(null));

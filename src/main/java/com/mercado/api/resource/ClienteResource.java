@@ -72,8 +72,20 @@ public class ClienteResource {
     @RunOnVirtualThread
     public Response listarClientes(@QueryParam("busca") String busca,
                                    @QueryParam("status") String status,
-                                   @QueryParam("apenasDevedores") @DefaultValue("false") boolean apenasDevedores) {
+                                   @QueryParam("apenasDevedores") @DefaultValue("false") boolean apenasDevedores,
+                                   @QueryParam("page") Integer page,
+                                   @QueryParam("size") Integer size) {
         UUID tenantId = securityContext.getTenantId().valor();
+
+        if (page != null || size != null) {
+            int pagina = page != null ? page : 0;
+            int tamanho = size != null ? size : 10;
+            PageDTO<ClienteDTO> paginado = listarClientesUseCase.executarPaginado(
+                tenantId, busca, status, apenasDevedores, pagina, tamanho
+            );
+            return Response.ok(paginado).build();
+        }
+
         List<ClienteDTO> clientes = listarClientesUseCase.executar(tenantId, busca, status, apenasDevedores);
         return Response.ok(clientes).build();
     }

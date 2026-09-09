@@ -37,4 +37,24 @@ public class ListarProdutosGerencialUseCase {
             .map(ProdutoGerencialDTO::from)
             .toList();
     }
+
+    public com.mercado.application.dto.PageDTO<ProdutoGerencialDTO> executarPaginado(UUID tenantIdUuid, String busca, String categoria, Boolean apenasEstoqueBaixo, int page, int size) {
+        if (tenantIdUuid == null) {
+            throw new IllegalArgumentException("TenantId é obrigatório para listar produtos.");
+        }
+
+        int paginaEfetiva = Math.max(0, page);
+        int tamanhoEfetivo = Math.min(Math.max(1, size), 100);
+
+        TenantId tenantId = TenantId.de(tenantIdUuid);
+        com.mercado.domain.repository.PageResult<Produto> pageResult = produtoRepository.listarGerencialPaginado(
+            tenantId, busca, categoria, apenasEstoqueBaixo, paginaEfetiva, tamanhoEfetivo
+        );
+
+        List<ProdutoGerencialDTO> dtos = pageResult.content().stream()
+            .map(ProdutoGerencialDTO::from)
+            .toList();
+
+        return com.mercado.application.dto.PageDTO.of(dtos, pageResult.page(), pageResult.size(), pageResult.totalElements());
+    }
 }

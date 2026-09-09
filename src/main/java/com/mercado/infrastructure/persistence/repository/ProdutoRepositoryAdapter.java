@@ -80,6 +80,39 @@ public class ProdutoRepositoryAdapter implements ProdutoRepository, PanacheRepos
     }
 
     @Override
+    public com.mercado.domain.repository.PageResult<Produto> listarGerencialPaginado(TenantId tenantId, String busca, String categoria, Boolean apenasEstoqueBaixo, int page, int size) {
+        StringBuilder query = new StringBuilder("tenantId = :tenantId");
+        Parameters params = Parameters.with("tenantId", tenantId.valor());
+
+        if (busca != null && !busca.isBlank()) {
+            query.append(" and lower(nome) like :busca");
+            params.and("busca", "%" + busca.trim().toLowerCase() + "%");
+        }
+
+        if (categoria != null && !categoria.isBlank() && !categoria.equalsIgnoreCase("Todas")) {
+            query.append(" and lower(categoria) = :categoria");
+            params.and("categoria", categoria.trim().toLowerCase());
+        }
+
+        if (apenasEstoqueBaixo != null && apenasEstoqueBaixo) {
+            query.append(" and estoqueAtual <= estoqueMinimo");
+        }
+
+        query.append(" order by nome asc");
+
+        var panacheQuery = find(query.toString(), params);
+        long totalElements = panacheQuery.count();
+
+        List<Produto> content = panacheQuery.page(io.quarkus.panache.common.Page.of(page, size))
+            .list()
+            .stream()
+            .map(ProdutoJpaEntity::toDomain)
+            .toList();
+
+        return new com.mercado.domain.repository.PageResult<>(content, page, size, totalElements);
+    }
+
+    @Override
     public void excluirOuInativar(UUID id, TenantId tenantId) {
         ProdutoJpaEntity entity = find("tenantId = ?1 and id = ?2", tenantId.valor(), id).firstResult();
         if (entity != null) {

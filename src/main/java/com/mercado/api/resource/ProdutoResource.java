@@ -71,8 +71,20 @@ public class ProdutoResource {
     @RunOnVirtualThread
     public Response listarProdutos(@QueryParam("busca") String busca,
                                    @QueryParam("categoria") String categoria,
-                                   @QueryParam("estoqueBaixo") Boolean estoqueBaixo) {
+                                   @QueryParam("estoqueBaixo") Boolean estoqueBaixo,
+                                   @QueryParam("page") Integer page,
+                                   @QueryParam("size") Integer size) {
         UUID tenantId = securityContext.getTenantId().valor();
+
+        if (page != null || size != null) {
+            int pagina = page != null ? page : 0;
+            int tamanho = size != null ? size : 10;
+            com.mercado.application.dto.PageDTO<ProdutoGerencialDTO> paginado = listarProdutosGerencialUseCase.executarPaginado(
+                tenantId, busca, categoria, estoqueBaixo, pagina, tamanho
+            );
+            return Response.ok(paginado).build();
+        }
+
         List<ProdutoGerencialDTO> produtos = listarProdutosGerencialUseCase.executar(tenantId, busca, categoria, estoqueBaixo);
         return Response.ok(produtos).build();
     }

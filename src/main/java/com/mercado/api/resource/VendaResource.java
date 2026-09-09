@@ -50,16 +50,19 @@ public class VendaResource {
 
     private final RegistrarVendaUseCase registrarVendaUseCase;
     private final ListarVendasCaixaAtualUseCase listarVendasCaixaAtualUseCase;
+    private final com.mercado.application.usecase.ListarVendasUseCase listarVendasUseCase;
     private final CancelarVendaUseCase cancelarVendaUseCase;
     private final TenantSecurityContext securityContext;
 
     @Inject
     public VendaResource(RegistrarVendaUseCase registrarVendaUseCase,
                          ListarVendasCaixaAtualUseCase listarVendasCaixaAtualUseCase,
+                         com.mercado.application.usecase.ListarVendasUseCase listarVendasUseCase,
                          CancelarVendaUseCase cancelarVendaUseCase,
                          TenantSecurityContext securityContext) {
         this.registrarVendaUseCase = Objects.requireNonNull(registrarVendaUseCase, "RegistrarVendaUseCase e obrigatorio.");
         this.listarVendasCaixaAtualUseCase = Objects.requireNonNull(listarVendasCaixaAtualUseCase, "ListarVendasCaixaAtualUseCase e obrigatorio.");
+        this.listarVendasUseCase = Objects.requireNonNull(listarVendasUseCase, "ListarVendasUseCase e obrigatorio.");
         this.cancelarVendaUseCase = Objects.requireNonNull(cancelarVendaUseCase, "CancelarVendaUseCase e obrigatorio.");
         this.securityContext = Objects.requireNonNull(securityContext, "TenantSecurityContext e obrigatorio.");
     }
@@ -98,10 +101,39 @@ public class VendaResource {
     }
 
     @GET
+    @RunOnVirtualThread
+    public Response listarVendas(@QueryParam("caixaId") UUID caixaId,
+                                 @QueryParam("status") String status,
+                                 @QueryParam("de") String de,
+                                 @QueryParam("ate") String ate,
+                                 @QueryParam("page") @jakarta.ws.rs.DefaultValue("0") int page,
+                                 @QueryParam("size") @jakarta.ws.rs.DefaultValue("10") int size) {
+        UUID tenantId = securityContext.getTenantId().valor();
+        java.time.Instant dataDe = (de != null && !de.isBlank()) ? java.time.Instant.parse(de.trim()) : null;
+        java.time.Instant dataAte = (ate != null && !ate.isBlank()) ? java.time.Instant.parse(ate.trim()) : null;
+
+        com.mercado.application.dto.PageDTO<VendaResumoDTO> resultado = listarVendasUseCase.executar(
+            tenantId, caixaId, status, dataDe, dataAte, page, size
+        );
+        return Response.ok(resultado).build();
+    }
+
+    @GET
     @Path("/caixa-atual")
     @RunOnVirtualThread
-    public Response listarVendasCaixaAtual() {
+    public Response listarVendasCaixaAtual(@QueryParam("page") Integer page,
+                                          @QueryParam("size") Integer size) {
         UUID tenantId = securityContext.getTenantId().valor();
+
+        if (page != null || size != null) {
+            int pagina = page != null ? page : 0;
+            int tamanho = size != null ? size : 10;
+            com.mercado.application.dto.PageDTO<VendaResumoDTO> paginado = listarVendasCaixaAtualUseCase.executarPaginado(
+                tenantId, pagina, tamanho
+            );
+            return Response.ok(paginado).build();
+        }
+
         List<VendaResumoDTO> vendas = listarVendasCaixaAtualUseCase.executar(tenantId);
         return Response.ok(vendas).build();
     }

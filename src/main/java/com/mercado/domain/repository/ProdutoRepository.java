@@ -25,6 +25,14 @@ public interface ProdutoRepository {
         return Collections.emptyList();
     }
 
+    default PageResult<Produto> listarGerencialPaginado(TenantId tenantId, String busca, String categoria, Boolean apenasEstoqueBaixo, int page, int size) {
+        List<Produto> todos = listarGerencial(tenantId, busca, categoria, apenasEstoqueBaixo);
+        int fromIndex = Math.min(page * size, todos.size());
+        int toIndex = Math.min(fromIndex + size, todos.size());
+        List<Produto> subList = fromIndex <= toIndex ? todos.subList(fromIndex, toIndex) : Collections.emptyList();
+        return new PageResult<>(subList, page, size, todos.size());
+    }
+
     default void excluirOuInativar(UUID id, TenantId tenantId) {
         buscarPorId(id, tenantId).ifPresent(produto -> {
             produto.inativar();

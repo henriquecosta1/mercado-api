@@ -85,6 +85,68 @@ public class VendaRepositoryAdapter implements VendaRepository, DashboardReposit
     }
 
     @Override
+    public com.mercado.domain.repository.PageResult<Venda> listarPorCaixaPaginado(TenantId tenantId, UUID caixaId, int page, int size) {
+        var panacheQuery = find("tenantId = ?1 and caixaId = ?2 order by criadoEm desc", tenantId.valor(), caixaId);
+        long totalElements = panacheQuery.count();
+
+        List<VendaJpaEntity> vendasJpa = panacheQuery.page(io.quarkus.panache.common.Page.of(page, size)).list();
+
+        List<Venda> content = vendasJpa.stream()
+            .map(vendaJpa -> {
+                List<ItemVendaJpaEntity> itensJpa = ItemVendaJpaEntity.find("vendaId = ?1", vendaJpa.id).list();
+                List<ItemVenda> itens = itensJpa.stream()
+                    .map(ItemVendaJpaEntity::toDomain)
+                    .toList();
+                return vendaJpa.toDomain(itens);
+            })
+            .toList();
+
+        return new com.mercado.domain.repository.PageResult<>(content, page, size, totalElements);
+    }
+
+    @Override
+    public com.mercado.domain.repository.PageResult<Venda> listarVendasPaginado(TenantId tenantId, UUID caixaId, String status, Instant de, Instant ate, int page, int size) {
+        StringBuilder query = new StringBuilder("tenantId = :tenantId");
+        io.quarkus.panache.common.Parameters params = io.quarkus.panache.common.Parameters.with("tenantId", tenantId.valor());
+
+        if (caixaId != null) {
+            query.append(" and caixaId = :caixaId");
+            params.and("caixaId", caixaId);
+        }
+        if (status != null && !status.isBlank() && !status.equalsIgnoreCase("TODAS")) {
+            query.append(" and status = :status");
+            params.and("status", status.trim().toUpperCase());
+        }
+        if (de != null) {
+            query.append(" and criadoEm >= :de");
+            params.and("de", de);
+        }
+        if (ate != null) {
+            query.append(" and criadoEm <= :ate");
+            params.and("ate", ate);
+        }
+
+        query.append(" order by criadoEm desc");
+
+        var panacheQuery = find(query.toString(), params);
+        long totalElements = panacheQuery.count();
+
+        List<VendaJpaEntity> vendasJpa = panacheQuery.page(io.quarkus.panache.common.Page.of(page, size)).list();
+
+        List<Venda> content = vendasJpa.stream()
+            .map(vendaJpa -> {
+                List<ItemVendaJpaEntity> itensJpa = ItemVendaJpaEntity.find("vendaId = ?1", vendaJpa.id).list();
+                List<ItemVenda> itens = itensJpa.stream()
+                    .map(ItemVendaJpaEntity::toDomain)
+                    .toList();
+                return vendaJpa.toDomain(itens);
+            })
+            .toList();
+
+        return new com.mercado.domain.repository.PageResult<>(content, page, size, totalElements);
+    }
+
+    @Override
     public List<Venda> listarFiadoPorCliente(UUID clienteId, TenantId tenantId) {
         List<VendaJpaEntity> vendasJpa = find(
             "tenantId = ?1 and clienteId = ?2 and formaPagamento = 'FIADO' and status = 'CONCLUIDA' order by criadoEm desc",

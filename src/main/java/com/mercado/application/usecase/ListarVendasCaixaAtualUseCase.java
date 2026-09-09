@@ -47,4 +47,28 @@ public class ListarVendasCaixaAtualUseCase {
             .map(VendaResumoDTO::from)
             .toList();
     }
+
+    public com.mercado.application.dto.PageDTO<VendaResumoDTO> executarPaginado(UUID tenantIdUuid, int page, int size) {
+        if (tenantIdUuid == null) {
+            throw new IllegalArgumentException("TenantId é obrigatório para listar vendas do caixa.");
+        }
+
+        int paginaEfetiva = Math.max(0, page);
+        int tamanhoEfetivo = Math.min(Math.max(1, size), 100);
+
+        TenantId tenantId = TenantId.de(tenantIdUuid);
+
+        Caixa caixa = caixaRepository.buscarCaixaAberto(tenantId)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Não existe caixa aberto para o tenant especificado."));
+
+        com.mercado.domain.repository.PageResult<Venda> pageResult = vendaRepository.listarPorCaixaPaginado(
+            tenantId, caixa.getId(), paginaEfetiva, tamanhoEfetivo
+        );
+
+        List<VendaResumoDTO> dtos = pageResult.content().stream()
+            .map(VendaResumoDTO::from)
+            .toList();
+
+        return com.mercado.application.dto.PageDTO.of(dtos, pageResult.page(), pageResult.size(), pageResult.totalElements());
+    }
 }

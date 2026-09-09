@@ -44,4 +44,30 @@ public class ListarClientesUseCase {
             .map(ClienteDTO::from)
             .toList();
     }
+
+    public com.mercado.application.dto.PageDTO<ClienteDTO> executarPaginado(UUID tenantIdUuid, String busca, String status, Boolean apenasDevedores, int page, int size) {
+        if (tenantIdUuid == null) {
+            throw new RegraDeNegocioException("TenantId é obrigatório para listar clientes.");
+        }
+        return executarPaginado(TenantId.de(tenantIdUuid), busca, status, apenasDevedores, page, size);
+    }
+
+    public com.mercado.application.dto.PageDTO<ClienteDTO> executarPaginado(TenantId tenantId, String busca, String status, Boolean apenasDevedores, int page, int size) {
+        if (tenantId == null) {
+            throw new RegraDeNegocioException("TenantId é obrigatório para listar clientes.");
+        }
+
+        int paginaEfetiva = Math.max(0, page);
+        int tamanhoEfetivo = Math.min(Math.max(1, size), 100);
+
+        com.mercado.domain.repository.PageResult<Cliente> pageResult = clienteRepository.listarTodosPaginado(
+            tenantId, busca, status, apenasDevedores, paginaEfetiva, tamanhoEfetivo
+        );
+
+        List<ClienteDTO> dtos = pageResult.content().stream()
+            .map(ClienteDTO::from)
+            .toList();
+
+        return com.mercado.application.dto.PageDTO.of(dtos, pageResult.page(), pageResult.size(), pageResult.totalElements());
+    }
 }

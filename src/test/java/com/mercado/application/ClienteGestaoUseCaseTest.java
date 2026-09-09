@@ -145,6 +145,33 @@ class ClienteGestaoUseCaseTest {
             () -> excluirClienteUseCase.executar(tenantIdRaw, idInexistente));
     }
 
+    @Test
+    @DisplayName("Deve paginar clientes corretamente com cálculo de metadados")
+    void devePaginarClientesCorretamente() {
+        for (int i = 1; i <= 15; i++) {
+            Cliente c = Cliente.criar(tenantId, String.format("Cliente %02d", i), "119999900" + (i < 10 ? "0" + i : i), Dinheiro.de("100.00"));
+            clienteRepository.salvar(c);
+        }
+
+        // Página 0, tamanho 5
+        var p0 = listarClientesUseCase.executarPaginado(tenantIdRaw, null, null, false, 0, 5);
+        assertEquals(5, p0.content().size());
+        assertEquals(15L, p0.totalElements());
+        assertEquals(3, p0.totalPages());
+        assertEquals(0, p0.page());
+        assertTrue(p0.first());
+        assertFalse(p0.last());
+        assertEquals("Cliente 01", p0.content().get(0).nome());
+
+        // Página 2, tamanho 5 (última página)
+        var p2 = listarClientesUseCase.executarPaginado(tenantIdRaw, null, null, false, 2, 5);
+        assertEquals(5, p2.content().size());
+        assertEquals(2, p2.page());
+        assertFalse(p2.first());
+        assertTrue(p2.last());
+        assertEquals("Cliente 11", p2.content().get(0).nome());
+    }
+
     static class FakeClienteRepository implements ClienteRepository {
         private final Map<UUID, Cliente> store = new HashMap<>();
 

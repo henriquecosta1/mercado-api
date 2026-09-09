@@ -34,6 +34,22 @@ public interface VendaRepository {
         return Collections.emptyList();
     }
 
+    default PageResult<Venda> listarPorCaixaPaginado(TenantId tenantId, UUID caixaId, int page, int size) {
+        List<Venda> todas = listarPorCaixa(tenantId, caixaId);
+        int fromIndex = Math.min(page * size, todas.size());
+        int toIndex = Math.min(fromIndex + size, todas.size());
+        List<Venda> subList = fromIndex <= toIndex ? todas.subList(fromIndex, toIndex) : Collections.emptyList();
+        return new PageResult<>(subList, page, size, todas.size());
+    }
+
+    default PageResult<Venda> listarVendasPaginado(TenantId tenantId, UUID caixaId, String status, java.time.Instant de, java.time.Instant ate, int page, int size) {
+        List<Venda> todas = caixaId != null ? listarPorCaixa(tenantId, caixaId) : Collections.emptyList();
+        int fromIndex = Math.min(page * size, todas.size());
+        int toIndex = Math.min(fromIndex + size, todas.size());
+        List<Venda> subList = fromIndex <= toIndex ? todas.subList(fromIndex, toIndex) : Collections.emptyList();
+        return new PageResult<>(subList, page, size, todas.size());
+    }
+
     default List<Venda> listarFiadoPorCliente(UUID clienteId, TenantId tenantId) {
         return Collections.emptyList();
     }

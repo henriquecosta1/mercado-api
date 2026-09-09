@@ -95,6 +95,39 @@ public class ClienteRepositoryAdapter implements ClienteRepository, PanacheRepos
     }
 
     @Override
+    public com.mercado.domain.repository.PageResult<Cliente> listarTodosPaginado(TenantId tenantId, String busca, String status, Boolean apenasDevedores, int page, int size) {
+        StringBuilder query = new StringBuilder("tenantId = :tenantId");
+        Parameters params = Parameters.with("tenantId", tenantId.valor());
+
+        if (busca != null && !busca.isBlank()) {
+            query.append(" and (lower(nome) like :busca or (apelido is not null and lower(apelido) like :busca) or (telefone is not null and telefone like :busca) or (cpf is not null and cpf like :busca))");
+            params.and("busca", "%" + busca.trim().toLowerCase() + "%");
+        }
+
+        if (status != null && !status.isBlank() && !status.equalsIgnoreCase("TODOS")) {
+            query.append(" and status = :status");
+            params.and("status", StatusCliente.de(status));
+        }
+
+        if (Boolean.TRUE.equals(apenasDevedores)) {
+            query.append(" and saldoDevedor > 0");
+        }
+
+        query.append(" order by nome asc");
+
+        var panacheQuery = find(query.toString(), params);
+        long totalElements = panacheQuery.count();
+
+        List<Cliente> content = panacheQuery.page(io.quarkus.panache.common.Page.of(page, size))
+            .list()
+            .stream()
+            .map(ClienteJpaEntity::toDomain)
+            .toList();
+
+        return new com.mercado.domain.repository.PageResult<>(content, page, size, totalElements);
+    }
+
+    @Override
     public void excluir(UUID id, TenantId tenantId) {
         delete("tenantId = ?1 and id = ?2", tenantId.valor(), id);
     }

@@ -185,6 +185,43 @@ class ProdutoGerencialUseCaseTest {
         assertTrue(estoqueBaixo.get(0).alertaEstoqueBaixo());
     }
 
+    @Test
+    @DisplayName("Deve paginar produtos corretamente calculando totalElements, totalPages, first e last")
+    void devePaginarProdutosCorretamente() {
+        for (int i = 1; i <= 25; i++) {
+            salvarProdutoUseCase.executar(new SalvarProdutoInput(
+                tenantIdRaw, null, String.format("Produto %02d", i), "Geral",
+                new BigDecimal("10.00"), null, "UN", new BigDecimal("10.000"), new BigDecimal("2.000")
+            ));
+        }
+
+        // Página 0, tamanho 10 -> itens 1 a 10
+        var pag0 = listarProdutosGerencialUseCase.executarPaginado(tenantIdRaw, null, null, false, 0, 10);
+        assertEquals(10, pag0.content().size());
+        assertEquals(25L, pag0.totalElements());
+        assertEquals(3, pag0.totalPages());
+        assertEquals(0, pag0.page());
+        assertTrue(pag0.first());
+        assertFalse(pag0.last());
+        assertEquals("Produto 01", pag0.content().get(0).nome());
+
+        // Página 1, tamanho 10 -> itens 11 a 20
+        var pag1 = listarProdutosGerencialUseCase.executarPaginado(tenantIdRaw, null, null, false, 1, 10);
+        assertEquals(10, pag1.content().size());
+        assertEquals(1, pag1.page());
+        assertFalse(pag1.first());
+        assertFalse(pag1.last());
+        assertEquals("Produto 11", pag1.content().get(0).nome());
+
+        // Página 2, tamanho 10 -> itens 21 a 25
+        var pag2 = listarProdutosGerencialUseCase.executarPaginado(tenantIdRaw, null, null, false, 2, 10);
+        assertEquals(5, pag2.content().size());
+        assertEquals(2, pag2.page());
+        assertFalse(pag2.first());
+        assertTrue(pag2.last());
+        assertEquals("Produto 21", pag2.content().get(0).nome());
+    }
+
     static class FakeProdutoRepository implements ProdutoRepository {
         private final Map<UUID, Produto> store = new HashMap<>();
 
