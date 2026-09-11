@@ -36,7 +36,7 @@ class ObterDashboardResumoUseCaseTest {
     }
 
     @Test
-    @DisplayName("Deve calcular resumo do dashboard com métricas de hoje, mês, fiado na rua e top produtos")
+    @DisplayName("Deve calcular resumo do dashboard com métricas de hoje, mês, fiado na rua, lucratividade, divisão de pagamentos e turnos")
     void deveCalcularDashboardResumoComSucesso() {
         // Prepara fiado na rua (2 clientes com débito)
         Cliente c1 = Cliente.criar(tenantId, "João", "11999990001", Dinheiro.zero());
@@ -66,6 +66,15 @@ class ObterDashboardResumoUseCaseTest {
             new TopProdutoVendidoDTO("Arroz 5kg", new BigDecimal("10.000"), new BigDecimal("250.00")),
             new TopProdutoVendidoDTO("Café 500g", new BigDecimal("8.000"), new BigDecimal("144.00"))
         );
+        dashboardRepository.lucroBrutoPeriodo = new LucroBrutoDTO(new BigDecimal("750.00"), 30.0, new BigDecimal("2500.00"));
+        dashboardRepository.divisaoPeriodo = new DivisaoPagamentoDTO(new BigDecimal("2000.00"), new BigDecimal("500.00"), 20.0, 80.0, 20, 5);
+        dashboardRepository.turnosPeriodo = new TurnosVendaDTO(
+            new TurnoDetalheDTO(new BigDecimal("500.00"), 5),
+            new TurnoDetalheDTO(new BigDecimal("1500.00"), 15),
+            new TurnoDetalheDTO(new BigDecimal("500.00"), 5),
+            new TurnoDetalheDTO(BigDecimal.ZERO, 0),
+            "Tarde"
+        );
 
         Instant agora = Instant.parse("2026-09-06T15:00:00Z");
         ZoneId zoneId = ZoneId.of("America/Sao_Paulo");
@@ -94,6 +103,21 @@ class ObterDashboardResumoUseCaseTest {
         // Valida Top produtos
         assertEquals(2, output.topProdutosMes().size());
         assertEquals("Arroz 5kg", output.topProdutosMes().get(0).nomeProduto());
+
+        // Valida Lucratividade
+        assertEquals(new BigDecimal("750.00"), output.lucroBruto());
+        assertEquals(30.0, output.margemPercentual());
+
+        // Valida Divisão de Pagamentos (À Vista vs Fiado)
+        assertEquals(new BigDecimal("2000.00"), output.totalRecebidoAVista());
+        assertEquals(new BigDecimal("500.00"), output.totalAFiado());
+        assertEquals(20.0, output.percentualFiado());
+
+        // Valida Turnos
+        assertEquals("Tarde", output.turnoMaiorMovimento());
+        assertNotNull(output.turnos());
+        assertEquals(new BigDecimal("1500.00"), output.turnos().tarde().faturamento());
+        assertEquals(15, output.turnos().tarde().totalVendas());
     }
 
     @Test
@@ -121,6 +145,15 @@ class ObterDashboardResumoUseCaseTest {
         dashboardRepository.metricasMes = new MetricasFaturamentoDTO(new BigDecimal("5000.00"), 50, new BigDecimal("100.00"));
         dashboardRepository.distribuicaoHoje = List.of(new TotalPorFormaPagamentoDTO("CARTAO", new BigDecimal("5000.00"), 50, 100.0));
         dashboardRepository.topProdutos = List.of(new TopProdutoVendidoDTO("Produto Top", new BigDecimal("100.000"), new BigDecimal("1000.00")));
+        dashboardRepository.lucroBrutoPeriodo = new LucroBrutoDTO(new BigDecimal("1500.00"), 30.0, new BigDecimal("5000.00"));
+        dashboardRepository.divisaoPeriodo = new DivisaoPagamentoDTO(new BigDecimal("4000.00"), new BigDecimal("1000.00"), 20.0, 80.0, 40, 10);
+        dashboardRepository.turnosPeriodo = new TurnosVendaDTO(
+            new TurnoDetalheDTO(new BigDecimal("1000.00"), 10),
+            new TurnoDetalheDTO(new BigDecimal("3000.00"), 30),
+            new TurnoDetalheDTO(new BigDecimal("1000.00"), 10),
+            new TurnoDetalheDTO(BigDecimal.ZERO, 0),
+            "Tarde"
+        );
 
         java.time.LocalDate inicio = java.time.LocalDate.of(2026, 8, 1);
         java.time.LocalDate fim = java.time.LocalDate.of(2026, 8, 31);
@@ -136,6 +169,8 @@ class ObterDashboardResumoUseCaseTest {
         assertEquals("CARTAO", output.distribuicaoPagamentos().get(0).formaPagamento());
         assertEquals(1, output.topProdutos().size());
         assertEquals("Produto Top", output.topProdutos().get(0).nomeProduto());
+        assertEquals(new BigDecimal("1500.00"), output.lucroBruto());
+        assertEquals("Tarde", output.turnoMaiorMovimento());
     }
 
     @Test
@@ -150,6 +185,9 @@ class ObterDashboardResumoUseCaseTest {
         MetricasFaturamentoDTO metricasMes;
         List<TotalPorFormaPagamentoDTO> distribuicaoHoje = Collections.emptyList();
         List<TopProdutoVendidoDTO> topProdutos = Collections.emptyList();
+        LucroBrutoDTO lucroBrutoPeriodo = new LucroBrutoDTO(BigDecimal.ZERO, 0.0, BigDecimal.ZERO);
+        DivisaoPagamentoDTO divisaoPeriodo = new DivisaoPagamentoDTO(BigDecimal.ZERO, BigDecimal.ZERO, 0.0, 0.0, 0, 0);
+        TurnosVendaDTO turnosPeriodo = new TurnosVendaDTO(new TurnoDetalheDTO(BigDecimal.ZERO, 0), new TurnoDetalheDTO(BigDecimal.ZERO, 0), new TurnoDetalheDTO(BigDecimal.ZERO, 0), new TurnoDetalheDTO(BigDecimal.ZERO, 0), "-");
         private int metricasCallCount = 0;
 
         @Override
@@ -168,6 +206,21 @@ class ObterDashboardResumoUseCaseTest {
         @Override
         public List<TopProdutoVendidoDTO> obterTopProdutos(TenantId tenantId, Instant de, Instant ate, int limite) {
             return topProdutos;
+        }
+
+        @Override
+        public LucroBrutoDTO calcularLucroBruto(TenantId tenantId, Instant de, Instant ate, BigDecimal faturamentoTotal) {
+            return lucroBrutoPeriodo != null ? lucroBrutoPeriodo : new LucroBrutoDTO(BigDecimal.ZERO, 0.0, BigDecimal.ZERO);
+        }
+
+        @Override
+        public DivisaoPagamentoDTO calcularDivisaoPagamento(TenantId tenantId, Instant de, Instant ate, BigDecimal faturamentoTotal) {
+            return divisaoPeriodo != null ? divisaoPeriodo : new DivisaoPagamentoDTO(BigDecimal.ZERO, BigDecimal.ZERO, 0.0, 0.0, 0, 0);
+        }
+
+        @Override
+        public TurnosVendaDTO calcularTurnosVenda(TenantId tenantId, Instant de, Instant ate, ZoneId zoneId) {
+            return turnosPeriodo != null ? turnosPeriodo : new TurnosVendaDTO(new TurnoDetalheDTO(BigDecimal.ZERO, 0), new TurnoDetalheDTO(BigDecimal.ZERO, 0), new TurnoDetalheDTO(BigDecimal.ZERO, 0), new TurnoDetalheDTO(BigDecimal.ZERO, 0), "-");
         }
     }
 

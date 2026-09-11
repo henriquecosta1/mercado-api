@@ -1,9 +1,12 @@
 package com.mercado.application.usecase;
 
 import com.mercado.application.dto.DashboardResumoOutput;
+import com.mercado.application.dto.DivisaoPagamentoDTO;
+import com.mercado.application.dto.LucroBrutoDTO;
 import com.mercado.application.dto.MetricasFaturamentoDTO;
 import com.mercado.application.dto.TopProdutoVendidoDTO;
 import com.mercado.application.dto.TotalPorFormaPagamentoDTO;
+import com.mercado.application.dto.TurnosVendaDTO;
 import com.mercado.application.repository.DashboardRepository;
 import com.mercado.domain.repository.ClienteRepository;
 import com.mercado.domain.valueobject.TenantId;
@@ -20,9 +23,9 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Caso de Uso: Obter Métricas Comerciais e Resumo do Dashboard Gerencial.
- * Calcula consolidações financeiras do dia e do período selecionado (HOJE, 7DIAS, MES, PERSONALIZADO),
- * total de fiado ativo e ranking de produtos mais vendidos.
+ * Caso de Uso: Obter MÃ©tricas Comerciais e Resumo do Dashboard Gerencial.
+ * Calcula consolidaÃ§Ãµes financeiras do dia e do perÃ­odo selecionado (HOJE, 7DIAS, MES, PERSONALIZADO),
+ * total de fiado ativo, ranking de produtos mais vendidos, lucratividade/margem, divisÃ£o Ã  vista vs. fiado e turnos.
  */
 @ApplicationScoped
 public class ObterDashboardResumoUseCase {
@@ -33,8 +36,8 @@ public class ObterDashboardResumoUseCase {
     @Inject
     public ObterDashboardResumoUseCase(DashboardRepository dashboardRepository,
                                        ClienteRepository clienteRepository) {
-        this.dashboardRepository = Objects.requireNonNull(dashboardRepository, "DashboardRepository é obrigatório.");
-        this.clienteRepository = Objects.requireNonNull(clienteRepository, "ClienteRepository é obrigatório.");
+        this.dashboardRepository = Objects.requireNonNull(dashboardRepository, "DashboardRepository Ã© obrigatÃ³rio.");
+        this.clienteRepository = Objects.requireNonNull(clienteRepository, "ClienteRepository Ã© obrigatÃ³rio.");
     }
 
     public DashboardResumoOutput executar(UUID tenantIdUuid) {
@@ -51,7 +54,7 @@ public class ObterDashboardResumoUseCase {
 
     public DashboardResumoOutput executar(UUID tenantIdUuid, String periodo, LocalDate dataInicio, LocalDate dataFim, ZoneId zoneId) {
         if (tenantIdUuid == null) {
-            throw new IllegalArgumentException("TenantId é obrigatório para obter o resumo do dashboard.");
+            throw new IllegalArgumentException("TenantId Ã© obrigatÃ³rio para obter o resumo do dashboard.");
         }
         ZoneId zone = (zoneId != null) ? zoneId : ZoneId.systemDefault();
         TenantId tenantId = TenantId.de(tenantIdUuid);
@@ -93,24 +96,30 @@ public class ObterDashboardResumoUseCase {
         Instant inicioHoje = hojeLocal.atStartOfDay(zone).toInstant();
         Instant agora = Instant.now();
 
-        // 1. Métricas de faturamento de hoje (início do dia até agora)
+        // 1. MÃ©tricas de faturamento de hoje (inÃ­cio do dia atÃ© agora)
         MetricasFaturamentoDTO hoje = dashboardRepository.calcularMetricasFaturamento(tenantId, inicioHoje, agora);
 
-        // 2. Métricas de faturamento do período selecionado
+        // 2. MÃ©tricas de faturamento do perÃ­odo selecionado
         MetricasFaturamentoDTO metricasPeriodo = dashboardRepository.calcularMetricasFaturamento(tenantId, inicioPeriodo, fimPeriodo);
 
         // 3. Saldo devedor total em aberto (Fiado na Rua)
         BigDecimal totalFiadoNaRua = clienteRepository.somarTotalSaldoDevedor(tenantId);
 
-        // 4. Distribuição das vendas no período selecionado por forma de pagamento
+        // 4. DistribuiÃ§Ã£o das vendas no perÃ­odo selecionado e hoje por forma de pagamento
         List<TotalPorFormaPagamentoDTO> distribuicaoPagamentos = dashboardRepository.obterDistribuicaoPagamentos(
             tenantId,
             inicioPeriodo,
             fimPeriodo,
             metricasPeriodo.faturamentoTotal()
         );
+        List<TotalPorFormaPagamentoDTO> distribuicaoPagamentosHoje = dashboardRepository.obterDistribuicaoPagamentos(
+            tenantId,
+            inicioHoje,
+            agora,
+            hoje.faturamentoTotal()
+        );
 
-        // 5. Top 5 produtos mais vendidos no período selecionado
+        // 5. Top 5 produtos mais vendidos no perÃ­odo selecionado
         List<TopProdutoVendidoDTO> topProdutos = dashboardRepository.obterTopProdutos(
             tenantId,
             inicioPeriodo,
@@ -118,21 +127,79 @@ public class ObterDashboardResumoUseCase {
             5
         );
 
+        // 6. Lucratividade do perÃ­odo e de hoje
+        LucroBrutoDTO lucratividadePeriodo = dashboardRepository.calcularLucroBruto(
+            tenantId,
+            inicioPeriodo,
+            fimPeriodo,
+            metricasPeriodo.faturamentoTotal()
+        );
+        LucroBrutoDTO lucratividadeHoje = dashboardRepository.calcularLucroBruto(
+            tenantId,
+            inicioHoje,
+            agora,
+            hoje.faturamentoTotal()
+        );
+
+        // 7. DivisÃ£o de Pagamento (Ã€ Vista vs. Fiado)
+        DivisaoPagamentoDTO divisaoPeriodo = dashboardRepository.calcularDivisaoPagamento(
+            tenantId,
+            inicioPeriodo,
+            fimPeriodo,
+            metricasPeriodo.faturamentoTotal()
+        );
+        DivisaoPagamentoDTO divisaoHoje = dashboardRepository.calcularDivisaoPagamento(
+            tenantId,
+            inicioHoje,
+            agora,
+            hoje.faturamentoTotal()
+        );
+
+        // 8. HorÃ¡rios de Maior Movimento (Turnos)
+        TurnosVendaDTO turnosPeriodo = dashboardRepository.calcularTurnosVenda(
+            tenantId,
+            inicioPeriodo,
+            fimPeriodo,
+            zone
+        );
+        TurnosVendaDTO turnosHoje = dashboardRepository.calcularTurnosVenda(
+            tenantId,
+            inicioHoje,
+            agora,
+            zone
+        );
+
         return new DashboardResumoOutput(
             hoje,
             metricasPeriodo,
+            metricasPeriodo,
             totalFiadoNaRua,
             distribuicaoPagamentos,
-            topProdutos
+            distribuicaoPagamentosHoje,
+            topProdutos,
+            topProdutos,
+            lucratividadePeriodo,
+            lucratividadeHoje,
+            divisaoPeriodo,
+            divisaoHoje,
+            turnosPeriodo,
+            turnosHoje,
+            lucratividadePeriodo.lucroBruto(),
+            lucratividadePeriodo.margemPercentual(),
+            divisaoPeriodo.totalRecebidoAVista(),
+            divisaoPeriodo.totalAFiado(),
+            divisaoPeriodo.percentualFiado(),
+            divisaoPeriodo.totalAmortizado(),
+            turnosPeriodo.turnoMaiorMovimento()
         );
     }
 
     public DashboardResumoOutput executar(UUID tenantIdUuid, ZoneId zoneId, Instant agora) {
         if (tenantIdUuid == null) {
-            throw new IllegalArgumentException("TenantId é obrigatório para obter o resumo do dashboard.");
+            throw new IllegalArgumentException("TenantId Ã© obrigatÃ³rio para obter o resumo do dashboard.");
         }
-        Objects.requireNonNull(zoneId, "ZoneId é obrigatório.");
-        Objects.requireNonNull(agora, "Instant de referência é obrigatório.");
+        Objects.requireNonNull(zoneId, "ZoneId Ã© obrigatÃ³rio.");
+        Objects.requireNonNull(agora, "Instant de referÃªncia Ã© obrigatÃ³rio.");
 
         TenantId tenantId = TenantId.de(tenantIdUuid);
 
@@ -151,6 +218,12 @@ public class ObterDashboardResumoUseCase {
             agora,
             metricasPeriodo.faturamentoTotal()
         );
+        List<TotalPorFormaPagamentoDTO> distribuicaoPagamentosHoje = dashboardRepository.obterDistribuicaoPagamentos(
+            tenantId,
+            inicioHoje,
+            agora,
+            hoje.faturamentoTotal()
+        );
 
         List<TopProdutoVendidoDTO> topProdutos = dashboardRepository.obterTopProdutos(
             tenantId,
@@ -159,12 +232,68 @@ public class ObterDashboardResumoUseCase {
             5
         );
 
+        LucroBrutoDTO lucratividadePeriodo = dashboardRepository.calcularLucroBruto(
+            tenantId,
+            inicioMes,
+            agora,
+            metricasPeriodo.faturamentoTotal()
+        );
+        LucroBrutoDTO lucratividadeHoje = dashboardRepository.calcularLucroBruto(
+            tenantId,
+            inicioHoje,
+            agora,
+            hoje.faturamentoTotal()
+        );
+
+        DivisaoPagamentoDTO divisaoPeriodo = dashboardRepository.calcularDivisaoPagamento(
+            tenantId,
+            inicioMes,
+            agora,
+            metricasPeriodo.faturamentoTotal()
+        );
+        DivisaoPagamentoDTO divisaoHoje = dashboardRepository.calcularDivisaoPagamento(
+            tenantId,
+            inicioHoje,
+            agora,
+            hoje.faturamentoTotal()
+        );
+
+        TurnosVendaDTO turnosPeriodo = dashboardRepository.calcularTurnosVenda(
+            tenantId,
+            inicioMes,
+            agora,
+            zoneId
+        );
+        TurnosVendaDTO turnosHoje = dashboardRepository.calcularTurnosVenda(
+            tenantId,
+            inicioHoje,
+            agora,
+            zoneId
+        );
+
         return new DashboardResumoOutput(
             hoje,
             metricasPeriodo,
+            metricasPeriodo,
             totalFiadoNaRua,
             distribuicaoPagamentos,
-            topProdutos
+            distribuicaoPagamentosHoje,
+            topProdutos,
+            topProdutos,
+            lucratividadePeriodo,
+            lucratividadeHoje,
+            divisaoPeriodo,
+            divisaoHoje,
+            turnosPeriodo,
+            turnosHoje,
+            lucratividadePeriodo.lucroBruto(),
+            lucratividadePeriodo.margemPercentual(),
+            divisaoPeriodo.totalRecebidoAVista(),
+            divisaoPeriodo.totalAFiado(),
+            divisaoPeriodo.percentualFiado(),
+            divisaoPeriodo.totalAmortizado(),
+            turnosPeriodo.turnoMaiorMovimento()
         );
     }
 }
+

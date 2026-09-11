@@ -52,6 +52,7 @@ public class VendaResource {
     private final ListarVendasCaixaAtualUseCase listarVendasCaixaAtualUseCase;
     private final com.mercado.application.usecase.ListarVendasUseCase listarVendasUseCase;
     private final CancelarVendaUseCase cancelarVendaUseCase;
+    private final com.mercado.application.usecase.ObterDetalhesVendaUseCase obterDetalhesVendaUseCase;
     private final TenantSecurityContext securityContext;
 
     @Inject
@@ -59,11 +60,13 @@ public class VendaResource {
                          ListarVendasCaixaAtualUseCase listarVendasCaixaAtualUseCase,
                          com.mercado.application.usecase.ListarVendasUseCase listarVendasUseCase,
                          CancelarVendaUseCase cancelarVendaUseCase,
+                         com.mercado.application.usecase.ObterDetalhesVendaUseCase obterDetalhesVendaUseCase,
                          TenantSecurityContext securityContext) {
         this.registrarVendaUseCase = Objects.requireNonNull(registrarVendaUseCase, "RegistrarVendaUseCase e obrigatorio.");
         this.listarVendasCaixaAtualUseCase = Objects.requireNonNull(listarVendasCaixaAtualUseCase, "ListarVendasCaixaAtualUseCase e obrigatorio.");
         this.listarVendasUseCase = Objects.requireNonNull(listarVendasUseCase, "ListarVendasUseCase e obrigatorio.");
         this.cancelarVendaUseCase = Objects.requireNonNull(cancelarVendaUseCase, "CancelarVendaUseCase e obrigatorio.");
+        this.obterDetalhesVendaUseCase = Objects.requireNonNull(obterDetalhesVendaUseCase, "ObterDetalhesVendaUseCase e obrigatorio.");
         this.securityContext = Objects.requireNonNull(securityContext, "TenantSecurityContext e obrigatorio.");
     }
 
@@ -136,6 +139,15 @@ public class VendaResource {
 
         List<VendaResumoDTO> vendas = listarVendasCaixaAtualUseCase.executar(tenantId);
         return Response.ok(vendas).build();
+    }
+
+    @GET
+    @Path("/{id}")
+    @RunOnVirtualThread
+    public Response obterDetalhesVenda(@PathParam("id") UUID id) {
+        UUID tenantId = securityContext.getTenantId().valor();
+        com.mercado.application.dto.VendaDetalheResponseDTO detalhe = obterDetalhesVendaUseCase.executar(tenantId, id);
+        return Response.ok(detalhe).build();
     }
 
     @POST

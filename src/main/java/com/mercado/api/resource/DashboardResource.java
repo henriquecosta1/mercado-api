@@ -43,6 +43,14 @@ public class DashboardResource {
     }
 
     @GET
+    @RunOnVirtualThread
+    public Response obterDashboard(@QueryParam("periodo") String periodo,
+                                  @QueryParam("inicio") LocalDate inicio,
+                                  @QueryParam("fim") LocalDate fim) {
+        return obterResumo(periodo, inicio, fim);
+    }
+
+    @GET
     @Path("/resumo")
     @RunOnVirtualThread
     public Response obterResumo(@QueryParam("periodo") String periodo,
