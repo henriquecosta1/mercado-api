@@ -2,6 +2,7 @@
 FROM gradle:8.7-jdk21-alpine AS build
 WORKDIR /app
 COPY --chown=gradle:gradle . .
+RUN chmod +x gradlew
 RUN ./gradlew build -Dquarkus.package.type=fast-jar -x test --no-daemon
 
 # Stage 2 (Runtime)
