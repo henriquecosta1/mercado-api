@@ -1,4 +1,4 @@
--- V8: Cria tabela de usuarios do sistema com suporte a multi-tenancy e autenticacao JWT
+﻿-- V8: Cria tabela de usuarios do sistema com suporte a multi-tenancy e autenticacao JWT
 CREATE TABLE usuarios (
     id          UUID PRIMARY KEY,
     tenant_id   UUID         NOT NULL REFERENCES tenants(id),
@@ -21,7 +21,7 @@ VALUES
         '00000000-0000-0000-0000-000000000001',
         'Administrador',
         'admin',
-        '/LewdBdXwtEnhWAXF2',
+        '$2a$12$R.43m4G4nqzVW9mabFeJ2.No6XNNRGkmbqAw0.xIS3MWA6MC5vhQi',
         'GERENTE',
         true,
         NOW()
@@ -31,7 +31,7 @@ VALUES
         '00000000-0000-0000-0000-000000000001',
         'Operador de Caixa',
         'caixa',
-        '/LewdBdXwtEnhWAXF2',
+        '$2a$12$R.43m4G4nqzVW9mabFeJ2.No6XNNRGkmbqAw0.xIS3MWA6MC5vhQi',
         'OPERADOR',
         true,
         NOW()
