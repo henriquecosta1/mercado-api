@@ -63,7 +63,7 @@ public class RateLimitFilter implements ContainerRequestFilter {
 
         // 1. Endpoint sensivel: Onboarding e Cadastro de Comercio (POST /api/onboarding, /onboarding, /api/auth/cadastrar-comercio, /auth/cadastrar-comercio)
         if ("POST".equalsIgnoreCase(method) && (path.equals("/api/onboarding") || path.equals("/onboarding") || path.equals("/api/auth/cadastrar-comercio") || path.equals("/auth/cadastrar-comercio"))) {
-            if (!rateLimiterService.tentarConsumirOnboarding(ip)) {
+            if (!rateLimiterService.tentarConsumirOnboarding(ip, path)) {
                 abortarCom429(requestContext, "Muitas tentativas de cadastro. Aguarde um minuto antes de tentar novamente.");
                 return;
             }
@@ -72,7 +72,7 @@ public class RateLimitFilter implements ContainerRequestFilter {
 
         // 2. Endpoint sensivel: Login / Brute Force (POST /api/auth/login ou /auth/login)
         if ("POST".equalsIgnoreCase(method) && (path.equals("/api/auth/login") || path.equals("/auth/login"))) {
-            if (!rateLimiterService.tentarConsumirLogin(ip)) {
+            if (!rateLimiterService.tentarConsumirLogin(ip, path)) {
                 abortarCom429(requestContext, "Muitas tentativas de login. Aguarde um minuto para tentar de novo.");
                 return;
             }
@@ -90,7 +90,7 @@ public class RateLimitFilter implements ContainerRequestFilter {
         }
 
         // 4. Demais rotas da aplicacao (limite volumetrico padrao de 100 req/min)
-        if (!rateLimiterService.tentarConsumirPadrao(ip)) {
+        if (!rateLimiterService.tentarConsumirPadrao(ip, path)) {
             abortarCom429(requestContext, "Limite de requisições excedido. Aguarde um minuto antes de tentar novamente.");
         }
     }
@@ -99,29 +99,39 @@ public class RateLimitFilter implements ContainerRequestFilter {
      * Extrai o IP real do cliente considerando proxies reversos (Nginx, Cloudflare, Traefik, AWS ALB)
      * e fallback para o endereco remoto do socket TCP Vert.x.
      */
-    public String extrairIp(ContainerRequestContext requestContext) {
+        public String extrairIp(ContainerRequestContext requestContext) {
+        if (httpServerRequest != null && httpServerRequest.remoteAddress() != null) {
+            String host = httpServerRequest.remoteAddress().host();
+            if (isIpValido(host)) {
+                return host;
+            }
+        }
+
         String xForwardedFor = requestContext.getHeaderString("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isBlank()) {
             String[] ips = xForwardedFor.split(",");
             String clientIp = ips[0].trim();
-            if (!clientIp.isEmpty()) {
+            if (isIpValido(clientIp)) {
                 return clientIp;
             }
         }
 
         String xRealIp = requestContext.getHeaderString("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isBlank()) {
+        if (xRealIp != null && !xRealIp.isBlank() && isIpValido(xRealIp.trim())) {
             return xRealIp.trim();
         }
 
-        if (httpServerRequest != null && httpServerRequest.remoteAddress() != null) {
-            String host = httpServerRequest.remoteAddress().host();
-            if (host != null && !host.isBlank()) {
-                return host;
-            }
-        }
-
         return "127.0.0.1";
+    }
+
+    private boolean isIpValido(String ip) {
+        if (ip == null || ip.isBlank()) return false;
+        try {
+            java.net.InetAddress.getByName(ip);
+            return true;
+        } catch (java.net.UnknownHostException e) {
+            return false;
+        }
     }
 
     /**

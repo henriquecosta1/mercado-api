@@ -137,9 +137,38 @@ class RateLimitFilterTest {
         assertEquals("127.0.0.1", ip);
     }
 
+        
+
+        
+
+            @Test
+    @DisplayName("Deve ignorar IP malicioso ou invalido no X-Forwarded-For e usar fallback")
+    void deveIgnorarIpInvalido() {
+        FakeContainerRequestContext ctx = new FakeContainerRequestContext("GET", "/produtos");
+        ctx.getHeaders().add("X-Forwarded-For", " drop table usuarios; , 10.0.0.2");
+        ctx.getHeaders().add("X-Real-IP", "177.12.34.56");
+
+        String ip = filter.extrairIp(ctx);
+        assertEquals("177.12.34.56", ip);
+    }
+
+    @Test
+    @DisplayName("Deve ignorar X-Real-IP invalido e cair no socket/localhost")
+    void deveIgnorarXRealIpInvalido() {
+        FakeContainerRequestContext ctx = new FakeContainerRequestContext("GET", "/produtos");
+        ctx.getHeaders().add("X-Real-IP", "invalid_ip");
+
+        String ip = filter.extrairIp(ctx);
+        assertEquals("127.0.0.1", ip); // Fallback absoluto
+    }
+
     // ==========================================
     // FAKE CONTAINER REQUEST CONTEXT
-    // ==========================================
+        
+
+        
+
+        // ==========================================
     static class FakeContainerRequestContext implements ContainerRequestContext {
         private String method;
         private String path;

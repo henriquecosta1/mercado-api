@@ -32,8 +32,8 @@ public class RateLimiterService {
      * Limite para Onboarding de novos mercados.
      * Capacidade: 3 tokens por minuto, recarga de 3 tokens por minuto.
      */
-    public boolean tentarConsumirOnboarding(String ip) {
-        String chave = "ONBOARDING:" + normalizarIp(ip);
+    public boolean tentarConsumirOnboarding(String ip, String contexto) {
+        String chave = "ONBOARDING:" + normalizarIp(ip) + ":" + contexto;
         Bucket bucket = buckets.get(chave, k -> criarBucket(3, 3));
         return bucket.tryConsume(1);
     }
@@ -42,8 +42,8 @@ public class RateLimiterService {
      * Limite para Login (protecao contra forca bruta em senhas).
      * Capacidade: 5 tokens por minuto, recarga de 5 tokens por minuto.
      */
-    public boolean tentarConsumirLogin(String ip) {
-        String chave = "LOGIN:" + normalizarIp(ip);
+    public boolean tentarConsumirLogin(String ip, String contexto) {
+        String chave = "LOGIN:" + normalizarIp(ip) + ":" + contexto;
         Bucket bucket = buckets.get(chave, k -> criarBucket(5, 5));
         return bucket.tryConsume(1);
     }
@@ -62,8 +62,8 @@ public class RateLimiterService {
      * Limite padrao para demais rotas da aplicacao.
      * Capacidade: 100 tokens por minuto, recarga de 100 tokens por minuto.
      */
-    public boolean tentarConsumirPadrao(String ip) {
-        String chave = "DEFAULT:" + normalizarIp(ip);
+    public boolean tentarConsumirPadrao(String ip, String contexto) {
+        String chave = "DEFAULT:" + normalizarIp(ip) + ":" + contexto;
         Bucket bucket = buckets.get(chave, k -> criarBucket(100, 100));
         return bucket.tryConsume(1);
     }

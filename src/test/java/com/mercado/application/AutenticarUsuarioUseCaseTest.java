@@ -81,14 +81,14 @@ class AutenticarUsuarioUseCaseTest {
     @DisplayName("Deve falhar com senha incorreta")
     void deveFalharComSenhaIncorreta() {
         LoginInput input = new LoginInput("roberio", "senhaErrada");
-        assertThrows(RegraDeNegocioException.class, () -> useCase.executar(input));
+        assertThrows(io.quarkus.security.UnauthorizedException.class, () -> useCase.executar(input));
     }
 
     @Test
     @DisplayName("Deve falhar com usuário inexistente")
     void deveFalharComUsuarioInexistente() {
         LoginInput input = new LoginInput("naoexiste", "12345678");
-        assertThrows(RegraDeNegocioException.class, () -> useCase.executar(input));
+        assertThrows(io.quarkus.security.UnauthorizedException.class, () -> useCase.executar(input));
     }
 
     @Test
@@ -142,11 +142,7 @@ class AutenticarUsuarioUseCaseTest {
         }
 
         @Override
-        public List<Usuario> buscarPorLogin(String login) {
-            return store.values().stream()
-                .filter(u -> u.getLogin().equalsIgnoreCase(login.trim()))
-                .toList();
-        }
+        public java.util.Optional<Usuario> buscarPorLogin(String login) { return store.values().stream().filter(u -> u.getLogin().equals(login)).findFirst(); }
 
         @Override
         public Optional<Usuario> buscarPorId(UUID id, TenantId tenantId) {

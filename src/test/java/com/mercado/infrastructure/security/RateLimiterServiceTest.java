@@ -23,15 +23,15 @@ class RateLimiterServiceTest {
     void deveLimitarOnboarding() {
         String ip = "192.168.1.100";
 
-        assertTrue(rateLimiterService.tentarConsumirOnboarding(ip), "1ª requisicao deve ser permitida");
-        assertTrue(rateLimiterService.tentarConsumirOnboarding(ip), "2ª requisicao deve ser permitida");
-        assertTrue(rateLimiterService.tentarConsumirOnboarding(ip), "3ª requisicao deve ser permitida");
+        assertTrue(rateLimiterService.tentarConsumirOnboarding(ip, "/onboarding"), "1ª requisicao deve ser permitida");
+        assertTrue(rateLimiterService.tentarConsumirOnboarding(ip, "/onboarding"), "2ª requisicao deve ser permitida");
+        assertTrue(rateLimiterService.tentarConsumirOnboarding(ip, "/onboarding"), "3ª requisicao deve ser permitida");
 
         // 4ª requisição deve ser bloqueada
-        assertFalse(rateLimiterService.tentarConsumirOnboarding(ip), "4ª requisicao deve ser bloqueada");
+        assertFalse(rateLimiterService.tentarConsumirOnboarding(ip, "/onboarding"), "4ª requisicao deve ser bloqueada");
 
         // Outro IP deve continuar permitido
-        assertTrue(rateLimiterService.tentarConsumirOnboarding("10.0.0.1"), "IP diferente deve ter cota propria");
+        assertTrue(rateLimiterService.tentarConsumirOnboarding("10.0.0.1", "/onboarding"), "IP diferente deve ter cota propria");
     }
 
     @Test
@@ -40,13 +40,13 @@ class RateLimiterServiceTest {
         String ip = "200.150.10.5";
 
         for (int i = 1; i <= 5; i++) {
-            assertTrue(rateLimiterService.tentarConsumirLogin(ip), "Requisicao " + i + " de login deve ser permitida");
+            assertTrue(rateLimiterService.tentarConsumirLogin(ip, "/login"), "Requisicao " + i + " de login deve ser permitida");
         }
 
-        assertFalse(rateLimiterService.tentarConsumirLogin(ip), "6ª tentativa de login deve ser bloqueada");
+        assertFalse(rateLimiterService.tentarConsumirLogin(ip, "/login"), "6ª tentativa de login deve ser bloqueada");
 
         // Outro IP deve ter cota intacta
-        assertTrue(rateLimiterService.tentarConsumirLogin("200.150.10.6"));
+        assertTrue(rateLimiterService.tentarConsumirLogin("200.150.10.6", "/login"));
     }
 
     @Test
@@ -72,10 +72,10 @@ class RateLimiterServiceTest {
         String ip = "10.0.0.50";
 
         for (int i = 1; i <= 100; i++) {
-            assertTrue(rateLimiterService.tentarConsumirPadrao(ip), "Requisicao padrao " + i + " deve ser permitida");
+            assertTrue(rateLimiterService.tentarConsumirPadrao(ip, "/api/produtos"), "Requisicao padrao " + i + " deve ser permitida");
         }
 
-        assertFalse(rateLimiterService.tentarConsumirPadrao(ip), "101ª requisicao padrao deve ser bloqueada");
+        assertFalse(rateLimiterService.tentarConsumirPadrao(ip, "/api/produtos"), "101ª requisicao padrao deve ser bloqueada");
     }
 
     @Test
@@ -84,12 +84,12 @@ class RateLimiterServiceTest {
         String ip = "10.0.0.99";
 
         for (int i = 1; i <= 5; i++) {
-            rateLimiterService.tentarConsumirLogin(ip);
+            rateLimiterService.tentarConsumirLogin(ip, "/login");
         }
-        assertFalse(rateLimiterService.tentarConsumirLogin(ip));
+        assertFalse(rateLimiterService.tentarConsumirLogin(ip, "/login"));
 
         rateLimiterService.limparCache();
 
-        assertTrue(rateLimiterService.tentarConsumirLogin(ip), "Apos limpar cache deve voltar a permitir");
+        assertTrue(rateLimiterService.tentarConsumirLogin(ip, "/login"), "Apos limpar cache deve voltar a permitir");
     }
 }

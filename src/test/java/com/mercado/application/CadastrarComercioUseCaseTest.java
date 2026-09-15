@@ -150,11 +150,7 @@ class CadastrarComercioUseCaseTest {
         }
 
         @Override
-        public List<Usuario> buscarPorLogin(String login) {
-            return store.values().stream()
-                .filter(u -> u.getLogin().equalsIgnoreCase(login.trim()))
-                .toList();
-        }
+        public java.util.Optional<Usuario> buscarPorLogin(String login) { return store.values().stream().filter(u -> u.getLogin().equals(login)).findFirst(); }
 
         @Override
         public Optional<Usuario> buscarPorId(UUID id, TenantId tenantId) {
