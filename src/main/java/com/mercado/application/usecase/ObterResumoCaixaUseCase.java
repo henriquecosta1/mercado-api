@@ -48,7 +48,7 @@ public class ObterResumoCaixaUseCase {
         TenantId tenantId = TenantId.de(tenantIdUuid);
 
         Caixa caixa = caixaRepository.buscarCaixaAberto(tenantId)
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Não existe caixa aberto para o tenant especificado."));
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Não existe caixa aberto para o mercado especificado."));
 
         List<Venda> vendas = vendaRepository.listarPorCaixa(tenantId, caixa.getId());
         List<MovimentacaoCaixa> movimentacoes = movimentacaoCaixaRepository.listarPorCaixa(caixa.getId(), tenantId);

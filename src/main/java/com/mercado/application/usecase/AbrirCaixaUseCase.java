@@ -41,7 +41,7 @@ public class AbrirCaixaUseCase {
         TenantId tenantId = TenantId.de(input.tenantId());
 
         if (caixaRepository.buscarCaixaAberto(tenantId).isPresent()) {
-            throw new RegraDeNegocioException("Já existe um caixa aberto para o tenant especificado.");
+            throw new RegraDeNegocioException("Já existe um caixa aberto para o mercado especificado.");
         }
 
         Caixa caixa = Caixa.abrir(tenantId, Dinheiro.de(input.saldoInicial()));

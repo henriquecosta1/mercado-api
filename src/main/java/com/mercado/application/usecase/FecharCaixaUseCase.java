@@ -35,7 +35,7 @@ public class FecharCaixaUseCase {
         TenantId tenantId = TenantId.de(tenantIdUuid);
 
         Caixa caixa = caixaRepository.buscarCaixaAberto(tenantId)
-            .orElseThrow(() -> new RegraDeNegocioException("Não existe caixa aberto para o tenant especificado."));
+            .orElseThrow(() -> new RegraDeNegocioException("Não existe caixa aberto para o mercado especificado."));
 
         Instant agora = Instant.now();
         caixa.fechar(agora);

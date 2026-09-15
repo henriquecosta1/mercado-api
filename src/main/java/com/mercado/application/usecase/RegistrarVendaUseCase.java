@@ -112,9 +112,9 @@ public class RegistrarVendaUseCase {
             valorTotal = Dinheiro.de(input.valorTotal());
         }
 
-        // 2. Busca caixa aberto para o tenant
+        // 2. Busca caixa aberto para o mercado
         Caixa caixa = caixaRepository.buscarCaixaAberto(tenantId)
-            .orElseThrow(() -> new RegraDeNegocioException("Não existe caixa aberto para o tenant especificado."));
+            .orElseThrow(() -> new RegraDeNegocioException("Não existe caixa aberto para o mercado especificado."));
 
         Dinheiro troco = Dinheiro.zero();
         BigDecimal saldoDevedorCliente = null;

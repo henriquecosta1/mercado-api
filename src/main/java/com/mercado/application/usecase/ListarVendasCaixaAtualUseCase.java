@@ -39,7 +39,7 @@ public class ListarVendasCaixaAtualUseCase {
         TenantId tenantId = TenantId.de(tenantIdUuid);
 
         Caixa caixa = caixaRepository.buscarCaixaAberto(tenantId)
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Não existe caixa aberto para o tenant especificado."));
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Não existe caixa aberto para o mercado especificado."));
 
         List<Venda> vendas = vendaRepository.listarPorCaixa(caixa.getId(), tenantId);
 
@@ -59,7 +59,7 @@ public class ListarVendasCaixaAtualUseCase {
         TenantId tenantId = TenantId.de(tenantIdUuid);
 
         Caixa caixa = caixaRepository.buscarCaixaAberto(tenantId)
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Não existe caixa aberto para o tenant especificado."));
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Não existe caixa aberto para o mercado especificado."));
 
         com.mercado.domain.repository.PageResult<Venda> pageResult = vendaRepository.listarPorCaixaPaginado(
             tenantId, caixa.getId(), paginaEfetiva, tamanhoEfetivo

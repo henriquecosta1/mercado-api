@@ -70,11 +70,11 @@ public class AmortizarFiadoUseCase {
 
         // 1. Busca o cliente
         Cliente cliente = clienteRepository.buscarPorId(tenantId, input.clienteId())
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Cliente não encontrado para o tenant especificado."));
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Cliente não encontrado para o mercado especificado."));
 
-        // 2. Busca caixa aberto para o tenant
+        // 2. Busca caixa aberto para o mercado
         Caixa caixa = caixaRepository.buscarCaixaAberto(tenantId)
-            .orElseThrow(() -> new RegraDeNegocioException("Não existe caixa aberto para o tenant especificado."));
+            .orElseThrow(() -> new RegraDeNegocioException("Não existe caixa aberto para o mercado especificado."));
 
         // 3. Amortiza a dívida do cliente (valida saldo e invariantes no domínio)
         cliente.amortizarDebito(valorPago);

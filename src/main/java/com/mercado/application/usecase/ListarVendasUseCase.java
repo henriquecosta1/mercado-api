@@ -29,7 +29,7 @@ public class ListarVendasUseCase {
 
     public PageDTO<VendaResumoDTO> executar(UUID tenantIdUuid, UUID caixaId, String status, Instant de, Instant ate, int page, int size) {
         if (tenantIdUuid == null) {
-            throw new IllegalArgumentException("TenantId é obrigatório para listar vendas.");
+            throw new IllegalArgumentException("O ID do mercado é obrigatório para listar vendas.");
         }
 
         int paginaEfetiva = Math.max(0, page);

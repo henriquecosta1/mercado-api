@@ -63,7 +63,7 @@ public class RegistrarMovimentacaoUseCase {
         Dinheiro valor = Dinheiro.de(input.valor());
 
         Caixa caixa = caixaRepository.buscarCaixaAberto(tenantId)
-            .orElseThrow(() -> new RegraDeNegocioException("Não existe caixa aberto para o tenant especificado."));
+            .orElseThrow(() -> new RegraDeNegocioException("Não existe caixa aberto para o mercado especificado."));
 
         if (tipo == TipoMovimentacao.SANGRIA) {
             if (validarPinGerenteUseCase != null) {
