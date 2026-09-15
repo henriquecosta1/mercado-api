@@ -9,5 +9,5 @@ import java.util.UUID;
 public record AmortizarFiadoOutput(
     UUID clienteId,
     BigDecimal valorPago,
-    BigDecimal novoSaldoDevedor
+    BigDecimal novoSaldoDevedor, BigDecimal troco
 ) {}

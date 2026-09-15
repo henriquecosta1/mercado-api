@@ -65,9 +65,26 @@ public class DomainExceptionHandler implements ExceptionMapper<Exception> {
                 .build();
         }
 
-        if (exception instanceof IllegalArgumentException e) {
+                if (exception instanceof IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(ErrorResponse.of("Requisição Inválida", e.getMessage(), Response.Status.BAD_REQUEST.getStatusCode()))
+                .entity(ErrorResponse.of("Requisicao Invalida", e.getMessage(), Response.Status.BAD_REQUEST.getStatusCode()))
+                .build();
+        }
+
+        // --- TRATAMENTO GLOBAL DE CONSTRAINT VIOLATION ---
+        if (exception instanceof jakarta.persistence.PersistenceException || exception instanceof org.hibernate.exception.ConstraintViolationException || (exception.getCause() != null && exception.getCause() instanceof org.hibernate.exception.ConstraintViolationException)) {
+            String msg = exception.getMessage() != null ? exception.getMessage().toLowerCase() : "";
+            if (msg.contains("constraint") || msg.contains("violates foreign key constraint")) {
+                return Response.status(422)
+                    .entity(ErrorResponse.of("Regra de Negocio Violada", "Nao e possivel excluir este registro pois ele ja possui historico vinculado no sistema. Tente inativa-lo.", 422))
+                    .build();
+            }
+        }
+        
+        // Outro fallback
+        if (exception.getMessage() != null && exception.getMessage().contains("violates foreign key constraint")) {
+            return Response.status(422)
+                .entity(ErrorResponse.of("Regra de Negocio Violada", "Nao e possivel excluir este registro pois ele ja possui historico vinculado no sistema. Tente inativa-lo.", 422))
                 .build();
         }
 

@@ -15,6 +15,7 @@ import com.mercado.domain.repository.ProdutoRepository;
 import com.mercado.domain.valueobject.TenantId;
 import com.mercado.infrastructure.security.TenantSecurityContext;
 import io.quarkus.security.Authenticated;
+import jakarta.annotation.security.RolesAllowed;
 import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -101,6 +102,7 @@ public class ProdutoResource {
     }
 
     @POST
+    @RolesAllowed({"GERENTE", "ADMIN"})
     @RunOnVirtualThread
     public Response cadastrarProduto(SalvarProdutoRequest request) {
         UUID tenantId = securityContext.getTenantId().valor();
@@ -128,6 +130,7 @@ public class ProdutoResource {
     }
 
     @PUT
+    @RolesAllowed({"GERENTE", "ADMIN"})
     @Path("/{id}")
     @RunOnVirtualThread
     public Response atualizarProduto(@PathParam("id") UUID id,
@@ -154,6 +157,7 @@ public class ProdutoResource {
     }
 
     @PATCH
+    @RolesAllowed({"GERENTE", "ADMIN"})
     @Path("/{id}/estoque")
     @RunOnVirtualThread
     public Response ajustarEstoque(@PathParam("id") UUID id,
@@ -175,6 +179,7 @@ public class ProdutoResource {
     }
 
     @PATCH
+    @RolesAllowed({"GERENTE", "ADMIN"})
     @Path("/{id}/status")
     @RunOnVirtualThread
     public Response alternarStatus(@PathParam("id") UUID id) {

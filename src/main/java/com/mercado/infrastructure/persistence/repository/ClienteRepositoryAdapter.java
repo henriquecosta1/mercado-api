@@ -127,9 +127,17 @@ public class ClienteRepositoryAdapter implements ClienteRepository, PanacheRepos
         return new com.mercado.domain.repository.PageResult<>(content, page, size, totalElements);
     }
 
-    @Override
+        @Override
     public void excluir(UUID id, TenantId tenantId) {
-        delete("tenantId = ?1 and id = ?2", tenantId.valor(), id);
+        try {
+            delete("tenantId = ?1 and id = ?2", tenantId.valor(), id);
+            flush();
+        } catch (jakarta.persistence.PersistenceException e) {
+            if (e.getMessage() != null && e.getMessage().contains("ConstraintViolationException") || e.getCause() instanceof org.hibernate.exception.ConstraintViolationException) {
+                throw new com.mercado.domain.exception.RegraDeNegocioException("Nao e possivel excluir o cliente, pois ele ja possui historico de vendas registrado no sistema. Inative-o em vez de excluir.");
+            }
+            throw e;
+        }
     }
 
     @Override

@@ -68,33 +68,40 @@ public class AmortizarFiadoUseCase {
         Dinheiro valorPago = Dinheiro.de(input.valorPago());
         FormaPagamento formaPagamento = FormaPagamento.de(input.formaPagamento());
 
-        // 1. Busca o cliente
+                // 1. Busca o cliente
         Cliente cliente = clienteRepository.buscarPorId(tenantId, input.clienteId())
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Cliente não encontrado para o mercado especificado."));
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Cliente nuo encontrado para o mercado especificado."));
 
         // 2. Busca caixa aberto para o mercado
         Caixa caixa = caixaRepository.buscarCaixaAberto(tenantId)
-            .orElseThrow(() -> new RegraDeNegocioException("Não existe caixa aberto para o mercado especificado."));
+            .orElseThrow(() -> new RegraDeNegocioException("Nuo existe caixa aberto para o mercado especificado."));
 
-        // 3. Amortiza a dívida do cliente (valida saldo e invariantes no domínio)
-        cliente.amortizarDebito(valorPago);
+        Dinheiro valorRecebido = Dinheiro.de(input.valorPago());
+        Dinheiro saldoAtual = cliente.getSaldoDevedor();
+        
+        // Calcula o valor efetivamente amortizado e o troco
+        Dinheiro valorEfetivamenteAmortizado = valorRecebido.isMaiorQue(saldoAtual) ? saldoAtual : valorRecebido;
+        Dinheiro troco = valorRecebido.isMaiorQue(saldoAtual) ? valorRecebido.subtrair(saldoAtual) : Dinheiro.ZERO;
 
-        // 4. Se a forma de pagamento for dinheiro, adiciona na gaveta física do caixa
+        // 3. Amortiza a dvida do cliente (valida saldo e invariantes no domnio)
+        cliente.amortizarDebito(valorEfetivamenteAmortizado);
+
+        // 4. Se a forma de pagamento for dinheiro, adiciona na gaveta fsica do caixa
         if (formaPagamento == FormaPagamento.DINHEIRO) {
-            caixa.adicionarDinheiro(valorPago);
+            caixa.adicionarDinheiro(valorEfetivamenteAmortizado);
             caixaRepository.atualizar(caixa);
         }
 
         // 5. Atualiza o cliente persistido
         clienteRepository.atualizar(cliente);
 
-        // 6. Registra a amortização para o extrato
+        // 6. Registra a amortizauo para o extrato
         if (amortizacaoRepository != null) {
             Amortizacao amortizacao = Amortizacao.criar(
                 tenantId,
                 cliente.getId(),
                 caixa.getId(),
-                valorPago,
+                valorEfetivamenteAmortizado,
                 formaPagamento.name()
             );
             amortizacaoRepository.salvar(amortizacao);
@@ -102,8 +109,9 @@ public class AmortizarFiadoUseCase {
 
         return new AmortizarFiadoOutput(
             cliente.getId(),
-            valorPago.valor(),
-            cliente.getSaldoDevedor().valor()
+            valorEfetivamenteAmortizado.valor(),
+            cliente.getSaldoDevedor().valor(),
+            troco.valor()
         );
     }
 }
