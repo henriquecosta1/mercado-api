@@ -21,6 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+import org.jboss.logging.Logger;
 
 /**
  * Recurso REST Administrativo para Gestão de Tenants, Ativação de Licença e Bloqueio de Inadimplência.
@@ -31,13 +34,15 @@ import java.util.UUID;
 @Consumes(MediaType.APPLICATION_JSON)
 public class AdminTenantResource {
 
+    private static final Logger LOG = Logger.getLogger(AdminTenantResource.class);
+
     private final GerenciarLicencaTenantUseCase gerenciarLicencaTenantUseCase;
     private final String secretKey;
 
     @Inject
     public AdminTenantResource(
             GerenciarLicencaTenantUseCase gerenciarLicencaTenantUseCase,
-            @ConfigProperty(name = "mercado.admin.secret-key", defaultValue = "admin123") String secretKey) {
+            @ConfigProperty(name = "mercado.admin.secret-key", defaultValue = "") String secretKey) {
         this.gerenciarLicencaTenantUseCase = Objects.requireNonNull(gerenciarLicencaTenantUseCase, "GerenciarLicencaTenantUseCase é obrigatório.");
         this.secretKey = secretKey;
     }
@@ -110,10 +115,23 @@ public class AdminTenantResource {
 
         return Response.ok(response).build();
     }
-
     private void validarChaveAdmin(String adminKey) {
-        if (adminKey == null || !adminKey.trim().equals(secretKey)) {
-            throw new UnauthorizedException("Chave de administração inválida ou ausente no cabeçalho X-Admin-Key.");
+        if (this.secretKey == null || this.secretKey.isBlank() || this.secretKey.trim().length() < 16) {
+            LOG.warn("ALERTA DE SEGURANCA: Tentativa de acesso a rota administrativa, mas a chave secreta mercado.admin.secret-key nao esta configurada corretamente ou e muito curta (minimo 16 caracteres). Fail-Close ativado.");
+            throw new UnauthorizedException("Acesso administrativo bloqueado por seguranca (chave ausente ou invalida no servidor).");
+        }
+
+        if (adminKey == null || adminKey.isBlank()) {
+            throw new UnauthorizedException("Chave de administracao ausente no cabecalho X-Admin-Key.");
+        }
+
+        byte[] chaveEsperada = this.secretKey.getBytes(StandardCharsets.UTF_8);
+        byte[] chaveRecebida = adminKey.trim().getBytes(StandardCharsets.UTF_8);
+
+        boolean autorizada = MessageDigest.isEqual(chaveEsperada, chaveRecebida);
+
+        if (!autorizada) {
+            throw new UnauthorizedException("Chave de administracao invalida.");
         }
     }
 }
