@@ -85,3 +85,7 @@ $RECYCLE.BIN/
 application-local.properties
 application-secret.properties
 http-client.private.env.json
+
+# JWT Keys
+privateKey.pem
+publicKey.pem
