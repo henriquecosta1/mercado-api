@@ -57,39 +57,21 @@ public class AutenticarUsuarioUseCase {
      * @return LoginOutput com token assinado e metadados
      * @throws RegraDeNegocioException se credenciais invalidas ou usuario inativo
      */
-    public LoginOutput executar(LoginInput input) {
+        public LoginOutput executar(LoginInput input) {
         Objects.requireNonNull(input, "LoginInput nao pode ser nulo.");
         validarInput(input);
 
         String loginLimpo = input.login().trim().toLowerCase();
 
-        java.util.List<Usuario> candidatos;
-        if (input.tenantIdOpcional() != null) {
-            candidatos = usuarioRepository.buscarPorLogin(loginLimpo, TenantId.de(input.tenantIdOpcional()))
-                .map(java.util.List::of)
-                .orElse(java.util.List.of());
-        } else {
-            candidatos = usuarioRepository.buscarPorLogin(loginLimpo);
+        Usuario usuarioAutenticado = usuarioRepository.buscarPorLogin(loginLimpo)
+            .orElseThrow(() -> new io.quarkus.security.UnauthorizedException("Credenciais invalidas."));
+
+        if (!usuarioAutenticado.isAtivo() || !usuarioAutenticado.autenticar(input.senha())) {
+            throw new io.quarkus.security.UnauthorizedException("Credenciais invalidas.");
         }
 
-        if (candidatos.isEmpty()) {
-            throw new RegraDeNegocioException("Credenciais invalidas.");
-        }
-
-        Usuario usuarioAutenticado = null;
-        for (Usuario candidato : candidatos) {
-            if (candidato.isAtivo() && candidato.autenticar(input.senha())) {
-                usuarioAutenticado = candidato;
-                break;
-            }
-        }
-
-        if (usuarioAutenticado == null) {
-            throw new RegraDeNegocioException("Credenciais invalidas.");
-        }
-
-        // Busca o estabelecimento (Tenant) e valida o status da licença
-        Tenant tenant = tenantRepository.buscarPorId(usuarioAutenticado.getTenantId())
+        // Busca o estabelecimento (Tenant) e valida o status
+                Tenant tenant = tenantRepository.buscarPorId(usuarioAutenticado.getTenantId())
             .orElseThrow(() -> new RegraDeNegocioException("Estabelecimento não encontrado."));
 
         if (tenant.isPendente()) {

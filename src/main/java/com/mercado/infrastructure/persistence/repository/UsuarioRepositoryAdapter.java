@@ -27,12 +27,10 @@ public class UsuarioRepositoryAdapter implements UsuarioRepository, PanacheRepos
     }
 
     @Override
-    public java.util.List<Usuario> buscarPorLogin(String login) {
+    public Optional<Usuario> buscarPorLogin(String login) {
         return find("login = ?1 and ativo = true", login.toLowerCase())
-            .list()
-            .stream()
-            .map(UsuarioJpaEntity::toDomain)
-            .toList();
+            .firstResultOptional()
+            .map(UsuarioJpaEntity::toDomain);
     }
 
     @Override

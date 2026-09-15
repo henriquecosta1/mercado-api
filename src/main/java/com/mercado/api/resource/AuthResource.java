@@ -26,6 +26,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.Objects;
 
 /**
@@ -68,15 +69,17 @@ public class AuthResource {
     @Path("/login")
     @PermitAll
     @RunOnVirtualThread
-    public Response login(LoginRequest request) {
+        public Response login(@jakarta.ws.rs.HeaderParam("X-Tenant-Id") UUID headerTenantId, LoginRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("O corpo da requisicao nao pode ser vazio.");
         }
 
+        UUID tenantId = request.tenantId() != null ? request.tenantId() : headerTenantId;
+
         LoginInput input = new LoginInput(
             request.login(),
             request.senha(),
-            request.tenantId()
+            tenantId
         );
 
         LoginOutput output = autenticarUsuarioUseCase.executar(input);

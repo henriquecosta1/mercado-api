@@ -22,12 +22,12 @@ public interface UsuarioRepository {
     Optional<Usuario> buscarPorLogin(String login, TenantId tenantId);
 
     /**
-     * Busca todos os usuarios com determinado login em qualquer tenant.
+     * Busca um usuario unicamente pelo seu login.
      *
      * @param login login do usuario (case-insensitive)
-     * @return Lista com os usuarios encontrados
+     * @return Optional com o usuario encontrado, ou vazio
      */
-    java.util.List<Usuario> buscarPorLogin(String login);
+    Optional<Usuario> buscarPorLogin(String login);
 
     /**
      * Busca um usuario pelo seu ID dentro de um tenant especifico.

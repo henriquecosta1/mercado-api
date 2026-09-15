@@ -40,8 +40,8 @@ public class CadastrarComercioUseCase {
         String loginLimpo = input.login().trim().toLowerCase();
 
         // 1. Validação de unicidade de login no sistema
-        List<Usuario> usuariosExistentes = usuarioRepository.buscarPorLogin(loginLimpo);
-        if (!usuariosExistentes.isEmpty()) {
+        
+        if (usuarioRepository.buscarPorLogin(loginLimpo).isPresent()) {
             throw new RegraDeNegocioException("Login já está em uso por outro usuário.");
         }
 
