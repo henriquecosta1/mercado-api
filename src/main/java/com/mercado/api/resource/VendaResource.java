@@ -112,8 +112,9 @@ public class VendaResource {
                                  @QueryParam("page") @jakarta.ws.rs.DefaultValue("0") int page,
                                  @QueryParam("size") @jakarta.ws.rs.DefaultValue("10") int size) {
         UUID tenantId = securityContext.getTenantId().valor();
-        java.time.Instant dataDe = (de != null && !de.isBlank()) ? java.time.Instant.parse(de.trim()) : null;
-        java.time.Instant dataAte = (ate != null && !ate.isBlank()) ? java.time.Instant.parse(ate.trim()) : null;
+                java.time.Instant dataDe = (de != null && !de.isBlank()) ? java.time.Instant.parse(de.trim()) : java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+        java.time.Instant dataAte = (ate != null && !ate.isBlank()) ? java.time.Instant.parse(ate.trim()) : java.time.LocalDate.now().atTime(23, 59, 59, 999_999_999).atZone(java.time.ZoneId.systemDefault()).toInstant();
+        
 
         com.mercado.application.dto.PageDTO<VendaResumoDTO> resultado = listarVendasUseCase.executar(
             tenantId, caixaId, status, dataDe, dataAte, page, size
@@ -121,24 +122,31 @@ public class VendaResource {
         return Response.ok(resultado).build();
     }
 
+        @GET
+    @Path("/do-dia")
+    @RunOnVirtualThread
+    public Response listarVendasDoDia(@QueryParam("page") Integer page,
+                                      @QueryParam("size") Integer size) {
+        UUID tenantId = securityContext.getTenantId().valor();
+        int pagina = page != null ? page : 0;
+        int tamanho = size != null ? size : 100;
+        
+        java.time.Instant dataDe = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+        java.time.Instant dataAte = java.time.LocalDate.now().atTime(23, 59, 59, 999_999_999).atZone(java.time.ZoneId.systemDefault()).toInstant();
+        
+        com.mercado.application.dto.PageDTO<VendaResumoDTO> paginado = listarVendasUseCase.executar(
+            tenantId, null, null, dataDe, dataAte, pagina, tamanho
+        );
+        return Response.ok(paginado).build();
+    }
+
     @GET
     @Path("/caixa-atual")
     @RunOnVirtualThread
     public Response listarVendasCaixaAtual(@QueryParam("page") Integer page,
                                           @QueryParam("size") Integer size) {
-        UUID tenantId = securityContext.getTenantId().valor();
-
-        if (page != null || size != null) {
-            int pagina = page != null ? page : 0;
-            int tamanho = size != null ? size : 10;
-            com.mercado.application.dto.PageDTO<VendaResumoDTO> paginado = listarVendasCaixaAtualUseCase.executarPaginado(
-                tenantId, pagina, tamanho
-            );
-            return Response.ok(paginado).build();
-        }
-
-        List<VendaResumoDTO> vendas = listarVendasCaixaAtualUseCase.executar(tenantId);
-        return Response.ok(vendas).build();
+        // Redireciona para do-dia para evitar zerar quando o caixa fecha
+        return listarVendasDoDia(page, size);
     }
 
     @GET
