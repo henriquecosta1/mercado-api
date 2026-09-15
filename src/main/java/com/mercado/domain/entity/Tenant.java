@@ -34,9 +34,17 @@ public class Tenant {
         this(id, nome, null, StatusTenant.ATIVO, null, pinGerente);
     }
 
-    public static Tenant criar(String nome, String pinGerente) {
+        public static Tenant criar(String nome, String pinGerente) {
         TenantId tenantId = TenantId.de(UUID.randomUUID());
-        String pinValido = (pinGerente != null && !pinGerente.isBlank()) ? pinGerente : "1234";
+        
+        String pinValido = (pinGerente != null && !pinGerente.isBlank()) ? pinGerente.trim() : null;
+        if (pinValido == null) {
+            // Gerar PIN seguro e aleatorio se nao fornecido
+            java.security.SecureRandom random = new java.security.SecureRandom();
+            int p = 1000 + random.nextInt(9000);
+            pinValido = String.valueOf(p);
+        }
+        
         return new Tenant(tenantId, nome.trim(), null, StatusTenant.ATIVO, Instant.now().plus(Duration.ofDays(365)), PinGerente.criar(pinValido));
     }
 

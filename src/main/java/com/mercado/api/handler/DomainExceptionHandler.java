@@ -7,9 +7,16 @@ import com.mercado.domain.exception.RegraDeNegocioException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
+import org.jboss.logging.Logger;
+import java.util.UUID;
+import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Provider
 public class DomainExceptionHandler implements ExceptionMapper<Exception> {
+
+    private static final Logger LOG = Logger.getLogger(DomainExceptionHandler.class);
 
     @Override
     public Response toResponse(Exception exception) {
@@ -92,8 +99,17 @@ public class DomainExceptionHandler implements ExceptionMapper<Exception> {
             return e.getResponse();
         }
 
+        String protocolo = UUID.randomUUID().toString().substring(0, 8);
+        LOG.errorv(exception, "Erro interno nao tratado [Protocolo: {0}]: {1}", protocolo, exception.getMessage());
+
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-            .entity(ErrorResponse.of("Erro Interno", exception.getMessage() != null ? exception.getMessage() : "Ocorreu um erro interno inesperado.", Response.Status.INTERNAL_SERVER_ERROR.getStatusCode()))
+            .entity(Map.of(
+                "status", 500,
+                "erro", "Erro Interno",
+                "mensagem", "Ocorreu um erro interno no servidor. Tente novamente mais tarde ou contate o suporte.",
+                "protocolo", protocolo,
+                "timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
+            ))
             .build();
     }
 }

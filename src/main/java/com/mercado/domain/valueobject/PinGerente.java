@@ -13,7 +13,7 @@ public final class PinGerente {
     private final String hash;
 
     private PinGerente(String hash) {
-        this.hash = Objects.requireNonNull(hash, "Hash do PIN não pode ser nulo.");
+        this.hash = Objects.requireNonNull(hash, "Hash do PIN nao pode ser nulo.");
     }
 
     public static PinGerente deHash(String hash) {
@@ -28,8 +28,12 @@ public final class PinGerente {
     }
 
     public static void validarFormato(String pin) {
-        if (pin == null || !pin.trim().matches("^\\d{4,6}$")) {
-            throw new RegraDeNegocioException("O PIN de gerente deve conter entre 4 e 6 dígitos numéricos.");
+        if (pin == null || !pin.trim().matches("^\\d{4}$")) {
+            throw new RegraDeNegocioException("O PIN deve conter exatamente 4 digitos numericos.");
+        }
+        String p = pin.trim();
+        if (p.matches("^(.)\\1+$") || p.equals("1234")) {
+            throw new RegraDeNegocioException("O PIN informado e muito fraco ou obvio. Evite sequencias repetidas ou conhecidas.");
         }
     }
 

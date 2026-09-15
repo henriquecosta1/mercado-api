@@ -51,7 +51,13 @@ public class Usuario {
     public static Usuario criar(TenantId tenantId, String nome, String login, String senhaTexto, Perfil perfil) {
         Objects.requireNonNull(senhaTexto, "Senha nao pode ser nula.");
         if (senhaTexto.isBlank()) {
-            throw new RegraDeNegocioException("Senha nao pode ser vazia.");
+            throw new RegraDeNegocioException("A senha e obrigatoria.");
+        }
+        if (senhaTexto.length() < 8 || senhaTexto.length() > 64) {
+            throw new RegraDeNegocioException("A senha deve conter no minimo 8 e no maximo 64 caracteres.");
+        }
+        if (!senhaTexto.matches("^(?=.*[a-zA-Z])(?=.*\\d).*$")) {
+            throw new RegraDeNegocioException("A senha deve conter pelo menos uma letra e um numero para garantir complexidade.");
         }
         String hash = BCrypt.hashpw(senhaTexto, BCrypt.gensalt(12));
         return new Usuario(UUID.randomUUID(), tenantId, nome, login, hash, perfil, true, Instant.now());
@@ -95,7 +101,7 @@ public class Usuario {
         if (login == null || login.isBlank()) {
             throw new RegraDeNegocioException("Login do usuario e obrigatorio.");
         }
-        return login.trim().toLowerCase();
+        return login.trim();
     }
 
     // Getters

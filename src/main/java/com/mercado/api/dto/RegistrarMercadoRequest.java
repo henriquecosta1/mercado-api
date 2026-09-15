@@ -1,7 +1,7 @@
 package com.mercado.api.dto;
 
 /**
- * Payload JSON recebido no endpoint público de Onboarding de Mercado.
+ * Payload JSON recebido no endpoint publico de Onboarding de Mercado.
  */
 public record RegistrarMercadoRequest(
     String nomeMercado,

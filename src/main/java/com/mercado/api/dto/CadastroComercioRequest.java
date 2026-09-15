@@ -1,7 +1,7 @@
 package com.mercado.api.dto;
 
 /**
- * Payload da requisição de auto-cadastro de novos estabelecimentos (comércios).
+ * Payload da requisicao de auto-cadastro de novos estabelecimentos (comercios).
  */
 public record CadastroComercioRequest(
     String nomeComercio,

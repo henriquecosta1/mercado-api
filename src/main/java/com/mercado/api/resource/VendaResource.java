@@ -30,6 +30,7 @@ import jakarta.ws.rs.core.Response;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.jboss.logging.Logger;
 
 /**
  * Recurso REST para operacoes de Venda.
@@ -43,6 +44,8 @@ import java.util.UUID;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class VendaResource {
+
+    private static final Logger LOG = Logger.getLogger(VendaResource.class);
 
     /** @deprecated Mantido por compatibilidade de integracao; use JWT claims. */
     @Deprecated
@@ -158,31 +161,42 @@ public class VendaResource {
         return Response.ok(detalhe).build();
     }
 
-    @POST
+        @POST
     @Path("/{id}/cancelar")
     @RunOnVirtualThread
-    public Response cancelarVenda(@HeaderParam(HEADER_GERENTE_PIN) String gerentePin,
-                                  @QueryParam("pin") String pinQuery,
+    public Response cancelarVenda(@HeaderParam("X-Gerente-Pin") String pinHeader,
                                   @PathParam("id") UUID vendaId,
                                   CancelarVendaRequest request) {
         UUID tenantId = securityContext.getTenantId().valor();
         if (vendaId == null) {
             throw new IllegalArgumentException("Id da venda e obrigatorio.");
         }
+        
         String motivo = request != null ? request.motivo() : null;
-        String pinEfetivo = (gerentePin != null && !gerentePin.isBlank()) ? gerentePin.trim() : null;
-        if (pinEfetivo == null && request != null) {
-            String pinCorpo = (request.pin() != null && !request.pin().isBlank()) ? request.pin() : request.pinGerente();
-            if (pinCorpo != null && !pinCorpo.isBlank()) {
-                pinEfetivo = pinCorpo.trim();
-            }
+        String pinEfetivo = (request != null && request.pin() != null && !request.pin().isBlank()) 
+                            ? request.pin().trim() 
+                            : (request != null && request.pinGerente() != null && !request.pinGerente().isBlank() 
+                                ? request.pinGerente().trim() 
+                                : null);
+
+        if (pinEfetivo == null && pinHeader != null && !pinHeader.isBlank()) {
+            pinEfetivo = pinHeader.trim();
         }
-        if (pinEfetivo == null && pinQuery != null && !pinQuery.isBlank()) {
-            pinEfetivo = pinQuery.trim();
+        
+        if (pinEfetivo == null || pinEfetivo.isBlank()) {
+            throw new jakarta.ws.rs.WebApplicationException(
+                jakarta.ws.rs.core.Response.status(jakarta.ws.rs.core.Response.Status.BAD_REQUEST)
+                    .entity(java.util.Map.of("erro", "Autorizacao de gerente obrigatoria: PIN nao fornecido no corpo ou cabecalho."))
+                    .type(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
+                    .build()
+            );
         }
 
         CancelarVendaInput input = new CancelarVendaInput(tenantId, vendaId, motivo, pinEfetivo);
-        CancelarVendaOutput output = cancelarVendaUseCase.executar(input);
+                CancelarVendaOutput output = cancelarVendaUseCase.executar(input);
+        
+        LOG.infof("Venda cancelada com sucesso | VendaID: %s | Operador: %s | Motivo: %s", 
+                  vendaId, securityContext.getLogin(), motivo);
         return Response.ok(output).build();
     }
 }
