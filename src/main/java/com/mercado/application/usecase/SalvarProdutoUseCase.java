@@ -37,6 +37,7 @@ public class SalvarProdutoUseCase {
         TenantId tenantId = TenantId.de(input.tenantId());
         Dinheiro precoVenda = input.precoVenda() != null ? Dinheiro.de(input.precoVenda()) : null;
         Dinheiro precoCusto = input.precoCusto() != null ? Dinheiro.de(input.precoCusto()) : null;
+        Dinheiro precoPromocional = input.precoPromocional() != null ? Dinheiro.de(input.precoPromocional()) : null;
 
         Produto produto;
         if (input.id() == null) {
@@ -47,9 +48,13 @@ public class SalvarProdutoUseCase {
                 input.categoria(),
                 precoVenda,
                 precoCusto,
+                precoPromocional,
                 input.unidade(),
                 input.estoqueInicial(),
-                input.estoqueMinimo()
+                input.estoqueMinimo(),
+                input.codigoBarras(),
+                input.codigoInterno(),
+                input.permiteFracionado()
             );
         } else {
             // Atualização de produto existente
@@ -61,8 +66,12 @@ public class SalvarProdutoUseCase {
                 input.categoria(),
                 precoVenda,
                 precoCusto,
+                precoPromocional,
                 input.unidade(),
-                input.estoqueMinimo()
+                input.estoqueMinimo(),
+                input.codigoBarras(),
+                input.codigoInterno(),
+                input.permiteFracionado() != null ? input.permiteFracionado() : produto.isPermiteFracionado()
             );
         }
 

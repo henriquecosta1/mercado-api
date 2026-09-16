@@ -13,8 +13,25 @@ public record SalvarProdutoInput(
     String categoria,
     BigDecimal precoVenda,
     BigDecimal precoCusto,
+    BigDecimal precoPromocional,
     String unidade,
     BigDecimal estoqueInicial,
-    BigDecimal estoqueMinimo
+    BigDecimal estoqueMinimo,
+    String codigoBarras,
+    String codigoInterno,
+    Boolean permiteFracionado
 ) {
+    public SalvarProdutoInput(
+        UUID tenantId,
+        UUID id,
+        String nome,
+        String categoria,
+        BigDecimal precoVenda,
+        BigDecimal precoCusto,
+        String unidade,
+        BigDecimal estoqueInicial,
+        BigDecimal estoqueMinimo
+    ) {
+        this(tenantId, id, nome, categoria, precoVenda, precoCusto, null, unidade, estoqueInicial, estoqueMinimo, null, null, null);
+    }
 }

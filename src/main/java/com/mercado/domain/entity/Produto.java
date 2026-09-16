@@ -24,10 +24,44 @@ public class Produto {
     private String categoria;
     private Dinheiro precoVenda;
     private Dinheiro precoCusto;
+    private Dinheiro precoPromocional;
     private String unidade;
     private BigDecimal estoqueAtual;
     private BigDecimal estoqueMinimo;
     private boolean ativo;
+    private String codigoBarras;
+    private String codigoInterno;
+    private boolean permiteFracionado;
+
+    public Produto(UUID id,
+                   TenantId tenantId,
+                   String nome,
+                   String categoria,
+                   Dinheiro precoVenda,
+                   Dinheiro precoCusto,
+                   Dinheiro precoPromocional,
+                   String unidade,
+                   BigDecimal estoqueAtual,
+                   BigDecimal estoqueMinimo,
+                   boolean ativo,
+                   String codigoBarras,
+                   String codigoInterno,
+                   boolean permiteFracionado) {
+        this.id = Objects.requireNonNull(id, "Id do produto não pode ser nulo.");
+        this.tenantId = Objects.requireNonNull(tenantId, "TenantId não pode ser nulo.");
+        this.nome = validarNome(nome);
+        this.categoria = normalizarCategoria(categoria);
+        this.precoVenda = validarPrecoVenda(precoVenda);
+        this.precoCusto = validarPrecoCusto(precoCusto);
+        this.precoPromocional = validarPrecoPromocional(precoPromocional, this.precoVenda);
+        this.unidade = normalizarUnidade(unidade);
+        this.estoqueAtual = estoqueAtual != null ? estoqueAtual.setScale(3, RoundingMode.HALF_EVEN) : BigDecimal.ZERO.setScale(3);
+        this.estoqueMinimo = normalizarEstoqueMinimo(estoqueMinimo);
+        this.ativo = ativo;
+        this.codigoBarras = normalizarCodigo(codigoBarras);
+        this.codigoInterno = normalizarCodigo(codigoInterno);
+        this.permiteFracionado = permiteFracionado;
+    }
 
     public Produto(UUID id,
                    TenantId tenantId,
@@ -39,16 +73,7 @@ public class Produto {
                    BigDecimal estoqueAtual,
                    BigDecimal estoqueMinimo,
                    boolean ativo) {
-        this.id = Objects.requireNonNull(id, "Id do produto não pode ser nulo.");
-        this.tenantId = Objects.requireNonNull(tenantId, "TenantId não pode ser nulo.");
-        this.nome = validarNome(nome);
-        this.categoria = normalizarCategoria(categoria);
-        this.precoVenda = validarPrecoVenda(precoVenda);
-        this.precoCusto = validarPrecoCusto(precoCusto);
-        this.unidade = normalizarUnidade(unidade);
-        this.estoqueAtual = estoqueAtual != null ? estoqueAtual.setScale(3, RoundingMode.HALF_EVEN) : BigDecimal.ZERO.setScale(3);
-        this.estoqueMinimo = normalizarEstoqueMinimo(estoqueMinimo);
-        this.ativo = ativo;
+        this(id, tenantId, nome, categoria, precoVenda, precoCusto, null, unidade, estoqueAtual, estoqueMinimo, ativo, null, null, isFracionadoPorUnidade(unidade));
     }
 
     public Produto(UUID id,
@@ -66,12 +91,43 @@ public class Produto {
                                 String categoria,
                                 Dinheiro precoVenda,
                                 Dinheiro precoCusto,
+                                Dinheiro precoPromocional,
+                                String unidade,
+                                BigDecimal estoqueInicial,
+                                BigDecimal estoqueMinimo,
+                                String codigoBarras,
+                                String codigoInterno,
+                                Boolean permiteFracionado) {
+        UUID id = UUID.randomUUID();
+        BigDecimal estoque = estoqueInicial != null ? estoqueInicial : BigDecimal.ZERO;
+        boolean fracionado = permiteFracionado != null ? permiteFracionado : isFracionadoPorUnidade(unidade);
+        return new Produto(
+            id,
+            tenantId,
+            nome,
+            categoria,
+            precoVenda,
+            precoCusto,
+            precoPromocional,
+            unidade,
+            estoque,
+            estoqueMinimo,
+            true,
+            codigoBarras,
+            codigoInterno,
+            fracionado
+        );
+    }
+
+    public static Produto criar(TenantId tenantId,
+                                String nome,
+                                String categoria,
+                                Dinheiro precoVenda,
+                                Dinheiro precoCusto,
                                 String unidade,
                                 BigDecimal estoqueInicial,
                                 BigDecimal estoqueMinimo) {
-        UUID id = UUID.randomUUID();
-        BigDecimal estoque = estoqueInicial != null ? estoqueInicial : BigDecimal.ZERO;
-        return new Produto(id, tenantId, nome, categoria, precoVenda, precoCusto, unidade, estoque, estoqueMinimo, true);
+        return criar(tenantId, nome, categoria, precoVenda, precoCusto, null, unidade, estoqueInicial, estoqueMinimo, null, null, null);
     }
 
     public static Produto criar(TenantId tenantId,
@@ -79,7 +135,29 @@ public class Produto {
                                 Dinheiro precoVenda,
                                 String unidade,
                                 BigDecimal estoqueInicial) {
-        return criar(tenantId, nome, CATEGORIA_PADRAO, precoVenda, null, unidade, estoqueInicial, ESTOQUE_MINIMO_PADRAO);
+        return criar(tenantId, nome, CATEGORIA_PADRAO, precoVenda, null, null, unidade, estoqueInicial, ESTOQUE_MINIMO_PADRAO, null, null, null);
+    }
+
+    public void atualizarDados(String nome,
+                               String categoria,
+                               Dinheiro precoVenda,
+                               Dinheiro precoCusto,
+                               Dinheiro precoPromocional,
+                               String unidade,
+                               BigDecimal estoqueMinimo,
+                               String codigoBarras,
+                               String codigoInterno,
+                               boolean permiteFracionado) {
+        this.nome = validarNome(nome);
+        this.categoria = normalizarCategoria(categoria);
+        this.precoVenda = validarPrecoVenda(precoVenda);
+        this.precoCusto = validarPrecoCusto(precoCusto);
+        this.precoPromocional = validarPrecoPromocional(precoPromocional, this.precoVenda);
+        this.unidade = normalizarUnidade(unidade);
+        this.estoqueMinimo = normalizarEstoqueMinimo(estoqueMinimo);
+        this.codigoBarras = normalizarCodigo(codigoBarras);
+        this.codigoInterno = normalizarCodigo(codigoInterno);
+        this.permiteFracionado = permiteFracionado;
     }
 
     public void atualizarDados(String nome,
@@ -88,17 +166,28 @@ public class Produto {
                                Dinheiro precoCusto,
                                String unidade,
                                BigDecimal estoqueMinimo) {
-        this.nome = validarNome(nome);
-        this.categoria = normalizarCategoria(categoria);
-        this.precoVenda = validarPrecoVenda(precoVenda);
-        this.precoCusto = validarPrecoCusto(precoCusto);
-        this.unidade = normalizarUnidade(unidade);
-        this.estoqueMinimo = normalizarEstoqueMinimo(estoqueMinimo);
+        atualizarDados(nome, categoria, precoVenda, precoCusto, this.precoPromocional, unidade, estoqueMinimo, this.codigoBarras, this.codigoInterno, this.permiteFracionado);
     }
 
     public void atualizarDados(String nome, String unidade) {
         this.nome = validarNome(nome);
         this.unidade = normalizarUnidade(unidade);
+    }
+
+    public void definirCodigoBarras(String codigoBarras) {
+        this.codigoBarras = normalizarCodigo(codigoBarras);
+    }
+
+    public void definirCodigoInterno(String codigoInterno) {
+        this.codigoInterno = normalizarCodigo(codigoInterno);
+    }
+
+    public void definirPrecoPromocional(Dinheiro precoPromocional) {
+        this.precoPromocional = validarPrecoPromocional(precoPromocional, this.precoVenda);
+    }
+
+    public void definirPermiteFracionado(boolean permiteFracionado) {
+        this.permiteFracionado = permiteFracionado;
     }
 
     public void ajustarEstoque(BigDecimal novoEstoque, String motivo) {
@@ -191,6 +280,34 @@ public class Produto {
         return estoqueMinimo.setScale(3, RoundingMode.HALF_EVEN);
     }
 
+    private static Dinheiro validarPrecoPromocional(Dinheiro precoPromocional, Dinheiro precoVenda) {
+        if (precoPromocional == null) {
+            return null;
+        }
+        if (precoPromocional.isNegativo() || precoPromocional.isZero()) {
+            throw new RegraDeNegocioException("Preço promocional deve ser estritamente maior que zero.");
+        }
+        if (precoVenda != null && precoPromocional.compareTo(precoVenda) >= 0) {
+            throw new RegraDeNegocioException("Preço promocional deve ser menor que o preço de venda regular.");
+        }
+        return precoPromocional;
+    }
+
+    private static String normalizarCodigo(String codigo) {
+        if (codigo == null || codigo.isBlank()) {
+            return null;
+        }
+        return codigo.trim();
+    }
+
+    public static boolean isFracionadoPorUnidade(String unidade) {
+        if (unidade == null) {
+            return false;
+        }
+        String u = unidade.trim().toUpperCase();
+        return u.equals("KG") || u.equals("G") || u.equals("LT") || u.equals("L") || u.equals("M") || u.equals("MT");
+    }
+
     public UUID getId() {
         return id;
     }
@@ -215,7 +332,15 @@ public class Produto {
         return precoCusto;
     }
 
+    public Dinheiro getPrecoPromocional() {
+        return precoPromocional;
+    }
+
     public String getUnidade() {
+        return unidade;
+    }
+
+    public String getUnidadeMedida() {
         return unidade;
     }
 
@@ -229,5 +354,21 @@ public class Produto {
 
     public boolean isAtivo() {
         return ativo;
+    }
+
+    public String getCodigoBarras() {
+        return codigoBarras;
+    }
+
+    public String getCodigoInterno() {
+        return codigoInterno;
+    }
+
+    public boolean isPermiteFracionado() {
+        return permiteFracionado;
+    }
+
+    public boolean getPermiteFracionado() {
+        return permiteFracionado;
     }
 }

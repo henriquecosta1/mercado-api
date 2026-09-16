@@ -133,4 +133,78 @@ class ProdutoTest {
         assertEquals("L", produto.getUnidade());
         assertEquals(new BigDecimal("15.000"), produto.getEstoqueMinimo());
     }
+
+    @Test
+    @DisplayName("Deve criar produto completo com código de barras, código interno e balança")
+    void deveCriarProdutoCompletoComCodigoBarrasEBalanca() {
+        Produto produto = Produto.criar(
+            tenantId,
+            "Queijo Mussarela Fatiado",
+            "Frios",
+            Dinheiro.de("49.90"),
+            Dinheiro.de("32.00"),
+            Dinheiro.de("42.90"),
+            "KG",
+            new BigDecimal("12.500"),
+            new BigDecimal("2.000"),
+            "7891000200304",
+            "0015",
+            true
+        );
+
+        assertEquals("7891000200304", produto.getCodigoBarras());
+        assertEquals("0015", produto.getCodigoInterno());
+        assertEquals(new BigDecimal("42.90"), produto.getPrecoPromocional().valor());
+        assertTrue(produto.isPermiteFracionado());
+        assertEquals("KG", produto.getUnidadeMedida());
+        assertEquals("KG", produto.getUnidade());
+    }
+
+    @Test
+    @DisplayName("Deve identificar automaticamente produto fracionado quando unidade for KG ou LT")
+    void deveIdentificarAutomaticamenteFracionadoPorUnidade() {
+        Produto pKg = Produto.criar(tenantId, "Banana Prata", Dinheiro.de("6.99"), "KG", new BigDecimal("30.000"));
+        assertTrue(pKg.isPermiteFracionado());
+
+        Produto pUn = Produto.criar(tenantId, "Refrigerante 2L", Dinheiro.de("8.50"), "UN", new BigDecimal("50.000"));
+        assertFalse(pUn.isPermiteFracionado());
+    }
+
+    @Test
+    @DisplayName("Deve falhar ao definir preço promocional maior ou igual ao preço de venda regular")
+    void deveFalharPrecoPromocionalInvalido() {
+        assertThrows(RegraDeNegocioException.class, () ->
+            Produto.criar(
+                tenantId,
+                "Sabão em Pó",
+                "Limpeza",
+                Dinheiro.de("15.00"),
+                Dinheiro.de("10.00"),
+                Dinheiro.de("15.00"),
+                "UN",
+                new BigDecimal("10.000"),
+                new BigDecimal("2.000"),
+                "7890001",
+                null,
+                false
+            )
+        );
+
+        assertThrows(RegraDeNegocioException.class, () ->
+            Produto.criar(
+                tenantId,
+                "Sabão em Pó",
+                "Limpeza",
+                Dinheiro.de("15.00"),
+                Dinheiro.de("10.00"),
+                Dinheiro.de("20.00"),
+                "UN",
+                new BigDecimal("10.000"),
+                new BigDecimal("2.000"),
+                "7890001",
+                null,
+                false
+            )
+        );
+    }
 }

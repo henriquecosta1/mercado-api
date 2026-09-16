@@ -36,6 +36,9 @@ public class ProdutoJpaEntity extends PanacheEntityBase {
     @Column(name = "preco_custo", precision = 12, scale = 2)
     public BigDecimal precoCusto;
 
+    @Column(name = "preco_promocional", precision = 12, scale = 2)
+    public BigDecimal precoPromocional;
+
     @Column(name = "unidade", nullable = false, length = 10)
     public String unidade;
 
@@ -44,6 +47,15 @@ public class ProdutoJpaEntity extends PanacheEntityBase {
 
     @Column(name = "estoque_minimo", nullable = false, precision = 12, scale = 3)
     public BigDecimal estoqueMinimo;
+
+    @Column(name = "codigo_barras", length = 100)
+    public String codigoBarras;
+
+    @Column(name = "codigo_interno", length = 50)
+    public String codigoInterno;
+
+    @Column(name = "permite_fracionado", nullable = false)
+    public boolean permiteFracionado;
 
     @Column(name = "ativo", nullable = false)
     public boolean ativo;
@@ -62,9 +74,13 @@ public class ProdutoJpaEntity extends PanacheEntityBase {
         entity.categoria = domain.getCategoria();
         entity.precoVenda = domain.getPrecoVenda().valor();
         entity.precoCusto = domain.getPrecoCusto() != null ? domain.getPrecoCusto().valor() : null;
+        entity.precoPromocional = domain.getPrecoPromocional() != null ? domain.getPrecoPromocional().valor() : null;
         entity.unidade = domain.getUnidade();
         entity.estoqueAtual = domain.getEstoqueAtual();
         entity.estoqueMinimo = domain.getEstoqueMinimo();
+        entity.codigoBarras = domain.getCodigoBarras();
+        entity.codigoInterno = domain.getCodigoInterno();
+        entity.permiteFracionado = domain.isPermiteFracionado();
         entity.ativo = domain.isAtivo();
         entity.criadoEm = Instant.now();
         return entity;
@@ -75,9 +91,13 @@ public class ProdutoJpaEntity extends PanacheEntityBase {
         this.categoria = domain.getCategoria();
         this.precoVenda = domain.getPrecoVenda().valor();
         this.precoCusto = domain.getPrecoCusto() != null ? domain.getPrecoCusto().valor() : null;
+        this.precoPromocional = domain.getPrecoPromocional() != null ? domain.getPrecoPromocional().valor() : null;
         this.unidade = domain.getUnidade();
         this.estoqueAtual = domain.getEstoqueAtual();
         this.estoqueMinimo = domain.getEstoqueMinimo();
+        this.codigoBarras = domain.getCodigoBarras();
+        this.codigoInterno = domain.getCodigoInterno();
+        this.permiteFracionado = domain.isPermiteFracionado();
         this.ativo = domain.isAtivo();
     }
 
@@ -89,10 +109,14 @@ public class ProdutoJpaEntity extends PanacheEntityBase {
             this.categoria,
             Dinheiro.de(this.precoVenda),
             this.precoCusto != null ? Dinheiro.de(this.precoCusto) : null,
+            this.precoPromocional != null ? Dinheiro.de(this.precoPromocional) : null,
             this.unidade,
             this.estoqueAtual,
             this.estoqueMinimo != null ? this.estoqueMinimo : new BigDecimal("5.000"),
-            this.ativo
+            this.ativo,
+            this.codigoBarras,
+            this.codigoInterno,
+            this.permiteFracionado
         );
     }
 }

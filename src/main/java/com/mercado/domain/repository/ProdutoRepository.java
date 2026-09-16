@@ -21,6 +21,25 @@ public interface ProdutoRepository {
 
     List<Produto> listarAtivos(TenantId tenantId);
 
+    /**
+     * Busca rápida de produto ativo por código de barras comercial ou código interno/referência de balança.
+     * Filtro estrito por tenantId garantindo isolamento multi-tenant seguro e resposta instantânea para o PDV.
+     *
+     * @param tenantId identificador único do estabelecimento (Tenant)
+     * @param codigo código de barras (EAN/GTIN) ou código interno de balança
+     * @return Optional contendo o produto ativo se encontrado
+     */
+    default Optional<Produto> findByCodigoOuCodigoBarras(UUID tenantId, String codigo) {
+        return Optional.empty();
+    }
+
+    default Optional<Produto> findByCodigoOuCodigoBarras(TenantId tenantId, String codigo) {
+        if (tenantId == null) {
+            return Optional.empty();
+        }
+        return findByCodigoOuCodigoBarras(tenantId.valor(), codigo);
+    }
+
     default List<Produto> listarGerencial(TenantId tenantId, String busca, String categoria, Boolean apenasEstoqueBaixo) {
         return Collections.emptyList();
     }

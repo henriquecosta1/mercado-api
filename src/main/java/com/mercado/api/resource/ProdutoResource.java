@@ -1,12 +1,15 @@
 package com.mercado.api.resource;
 
 import com.mercado.api.dto.AjustarEstoqueRequest;
+import com.mercado.api.dto.ErrorResponse;
 import com.mercado.api.dto.SalvarProdutoRequest;
 import com.mercado.application.dto.AjustarEstoqueInput;
+import com.mercado.application.dto.ProdutoCarrinhoDTO;
 import com.mercado.application.dto.ProdutoGerencialDTO;
 import com.mercado.application.dto.SalvarProdutoInput;
 import com.mercado.application.usecase.AjustarEstoqueUseCase;
 import com.mercado.application.usecase.AlternarStatusProdutoUseCase;
+import com.mercado.application.usecase.BuscarProdutoPorCodigoUseCase;
 import com.mercado.application.usecase.ListarProdutosGerencialUseCase;
 import com.mercado.application.usecase.SalvarProdutoUseCase;
 import com.mercado.domain.entity.Produto;
@@ -50,6 +53,7 @@ public class ProdutoResource {
     private final SalvarProdutoUseCase salvarProdutoUseCase;
     private final AjustarEstoqueUseCase ajustarEstoqueUseCase;
     private final AlternarStatusProdutoUseCase alternarStatusProdutoUseCase;
+    private final BuscarProdutoPorCodigoUseCase buscarProdutoPorCodigoUseCase;
     private final ProdutoRepository produtoRepository;
     private final TenantSecurityContext securityContext;
 
@@ -58,12 +62,14 @@ public class ProdutoResource {
                            SalvarProdutoUseCase salvarProdutoUseCase,
                            AjustarEstoqueUseCase ajustarEstoqueUseCase,
                            AlternarStatusProdutoUseCase alternarStatusProdutoUseCase,
+                           BuscarProdutoPorCodigoUseCase buscarProdutoPorCodigoUseCase,
                            ProdutoRepository produtoRepository,
                            TenantSecurityContext securityContext) {
         this.listarProdutosGerencialUseCase = Objects.requireNonNull(listarProdutosGerencialUseCase, "ListarProdutosGerencialUseCase e obrigatorio.");
         this.salvarProdutoUseCase = Objects.requireNonNull(salvarProdutoUseCase, "SalvarProdutoUseCase e obrigatorio.");
         this.ajustarEstoqueUseCase = Objects.requireNonNull(ajustarEstoqueUseCase, "AjustarEstoqueUseCase e obrigatorio.");
         this.alternarStatusProdutoUseCase = Objects.requireNonNull(alternarStatusProdutoUseCase, "AlternarStatusProdutoUseCase e obrigatorio.");
+        this.buscarProdutoPorCodigoUseCase = Objects.requireNonNull(buscarProdutoPorCodigoUseCase, "BuscarProdutoPorCodigoUseCase e obrigatorio.");
         this.produtoRepository = Objects.requireNonNull(produtoRepository, "ProdutoRepository e obrigatorio.");
         this.securityContext = Objects.requireNonNull(securityContext, "TenantSecurityContext e obrigatorio.");
     }
@@ -101,6 +107,39 @@ public class ProdutoResource {
         return Response.ok(ProdutoGerencialDTO.from(produto)).build();
     }
 
+    /**
+     * Endpoint de consulta ultra-rapida de frente de caixa (< 50ms).
+     * Suporta código de barras comercial (EAN-8, EAN-12, EAN-13, EAN-14)
+     * e código interno ou etiquetas pesáveis de balança.
+     * Retorna HTTP 200 com os dados necessários para o carrinho ou HTTP 404 padronizado.
+     */
+    @GET
+    @Path("/codigo/{codigo}")
+    @RolesAllowed({"OPERADOR", "GERENTE", "ADMIN"})
+    @RunOnVirtualThread
+    public Response buscarPorCodigo(@PathParam("codigo") String codigo) {
+        UUID tenantId = securityContext.getTenantId().valor();
+        try {
+            ProdutoCarrinhoDTO produto = buscarProdutoPorCodigoUseCase.executar(tenantId, codigo);
+            return Response.ok(produto).build();
+        } catch (RecursoNaoEncontradoException e) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(ErrorResponse.of("Recurso Não Encontrado", e.getMessage(), Response.Status.NOT_FOUND.getStatusCode()))
+                .build();
+        }
+    }
+
+    /**
+     * Alternativa via query param: GET /api/produtos/buscar-codigo?codigo={codigo}
+     */
+    @GET
+    @Path("/buscar-codigo")
+    @RolesAllowed({"OPERADOR", "GERENTE", "ADMIN"})
+    @RunOnVirtualThread
+    public Response buscarPorCodigoParam(@QueryParam("codigo") String codigo) {
+        return buscarPorCodigo(codigo);
+    }
+
     @POST
     @RolesAllowed({"GERENTE", "ADMIN"})
     @RunOnVirtualThread
@@ -117,9 +156,13 @@ public class ProdutoResource {
             request.categoria(),
             request.precoVenda(),
             request.precoCusto(),
+            request.precoPromocional(),
             request.unidade(),
             request.estoqueInicial(),
-            request.estoqueMinimo()
+            request.estoqueMinimo(),
+            request.codigoBarras(),
+            request.codigoInterno(),
+            request.permiteFracionado()
         );
 
         ProdutoGerencialDTO produtoCriado = salvarProdutoUseCase.executar(input);
@@ -147,9 +190,13 @@ public class ProdutoResource {
             request.categoria(),
             request.precoVenda(),
             request.precoCusto(),
+            request.precoPromocional(),
             request.unidade(),
             request.estoqueInicial(),
-            request.estoqueMinimo()
+            request.estoqueMinimo(),
+            request.codigoBarras(),
+            request.codigoInterno(),
+            request.permiteFracionado()
         );
 
         ProdutoGerencialDTO produtoAtualizado = salvarProdutoUseCase.executar(input);
